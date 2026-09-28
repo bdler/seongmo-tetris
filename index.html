@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<title>Seongmo Tetris</title>
+<title>성모테트리스</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Chakra+Petch:wght@500;700&family=IBM+Plex+Sans+KR:wght@400;600&display=swap" rel="stylesheet">
@@ -260,6 +260,7 @@
   .menu-grid > * { animation: rise 0.7s cubic-bezier(.2,.8,.2,1) both; }
   .menu-grid > *:nth-child(2) { animation-delay: 0.12s; }
   @keyframes rise { from { opacity: 0; transform: translateY(18px); } }
+  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
   .brand .kicker { font-family: var(--f-mono); font-size: 12px; letter-spacing: 0.6em; color: var(--accent); font-weight: 700; margin-bottom: 14px; }
   #logo { max-width: 100%; }
   .brand .tagline { font-family: var(--f-display); font-size: 22px; margin: 18px 0 26px; line-height: 1.35; }
@@ -446,7 +447,8 @@
 <div id="menu">
   <div class="menu-grid">
     <div class="brand">
-      <div class="kicker">SEONGMO</div>
+      <h1 class="sr-only">성모테트리스</h1>
+      <div class="kicker">SEONGMO TETRIS</div>
       <canvas id="logo"></canvas>
       <div class="tagline">떨어지는 블록을 따라<br><em>열 개의 세계</em>를 여행하세요</div>
       <div class="map-title">JOURNEY MAP</div>
@@ -997,8 +999,9 @@
     setupCanvas(nextCv, nctx, previewCell * 5, previewCell * 3 * 5);
     setupCanvas(ambCv, actx, vw, vh);
     setupCanvas(fxCv, fctx, vw, vh);
-    logoCell = Math.max(9, Math.min(20, Math.floor((Math.min(vw, 980) * (vw > 860 ? 0.5 : 0.9)) / LOGO_W)));
-    setupCanvas(logoCv, lctx, LOGO_W * logoCell, 5 * logoCell + logoCell);
+    logoCell = Math.max(3, Math.min(10, Math.floor((Math.min(vw, 980) * (vw > 860 ? 0.46 : 0.86)) / LOGO_W)));
+    setupCanvas(logoCv, lctx, LOGO_W * logoCell, (LOGO_H + 1) * logoCell);
+    logoCache = null;
   }
 
   // =====================================================================
@@ -1096,37 +1099,87 @@
   const colorOf = t => t === 'G' ? GARBAGE_COLOR : t === 'W' ? ZONE_COLOR : theme.colors[t];
 
   // =====================================================================
-  //  Menu logo: "TETRIS" spelled in blocks that drop in
+  //  Menu logo: "성모 / 테트리스" rendered to a tiny canvas, then rebuilt as falling blocks
   // =====================================================================
-  const GLYPHS = {
-    T: ['111', '010', '010', '010', '010'],
-    E: ['111', '100', '111', '100', '111'],
-    R: ['110', '101', '110', '101', '101'],
-    I: ['111', '010', '010', '010', '111'],
-    S: ['011', '100', '010', '001', '110'],
-  };
-  const LOGO_TEXT = 'TETRIS', LOGO_TYPES = ['T', 'O', 'T', 'Z', 'I', 'S'];
-  const LOGO_W = LOGO_TEXT.length * 4 - 1;
-  const logoBlocks = [];
-  LOGO_TEXT.split('').forEach((ch, li) => {
-    GLYPHS[ch].forEach((row, r) => row.split('').forEach((v, c) => {
-      if (v === '1') logoBlocks.push({ x: li * 4 + c, y: r, type: LOGO_TYPES[li], delay: li * 90 + (4 - r) * 40 + Math.random() * 60 });
+  const LOGO_LINES = ['성모', '테트리스'];
+  const LOGO_PX = 24, LOGO_GAP = 8, LOGO_LINE_SPACE = 3;
+  const LOGO_TYPES = ['T', 'Z', 'I', 'O', 'S', 'L', 'J'];
+  let LOGO_W = 1, LOGO_H = 1, logoBlocks = [], logoDone = 0, logoCache = null;
+
+  function buildLogo() {
+    const font = `${LOGO_PX}px "Black Han Sans", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif`;
+    const off = document.createElement('canvas');
+    const c = off.getContext('2d', { willReadFrequently: true });
+    c.font = font;
+    const W = Math.ceil(Math.max(...LOGO_LINES.map(t => c.measureText(t).width))) + 4;
+    const lineH = LOGO_PX + LOGO_GAP, H = LOGO_LINES.length * lineH + 2;
+    off.width = W; off.height = H;
+    c.font = font; c.textBaseline = 'top'; c.fillStyle = '#fff';
+    // Remember where each syllable sits so every syllable gets its own piece colour.
+    const spans = LOGO_LINES.map((t, li) => {
+      c.fillText(t, 2, li * lineH + 1);
+      let x = 2;
+      return [...t].map(ch => { const w = c.measureText(ch).width; const sp = [x, x + w]; x += w; return sp; });
+    });
+    const data = c.getImageData(0, 0, W, H).data;
+    const lines = LOGO_LINES.map(() => ({ cells: [], top: H, bottom: -1 }));
+    let minX = W, maxX = 0;
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      if (data[(y * W + x) * 4 + 3] < 120) continue;
+      const li = Math.min(LOGO_LINES.length - 1, Math.floor(y / lineH));
+      let ci = spans[li].findIndex(([a, b]) => x >= a - 0.5 && x < b + 0.5);
+      if (ci < 0) ci = spans[li].length - 1;
+      const gi = LOGO_LINES.slice(0, li).join('').length + ci;
+      const L = lines[li];
+      L.cells.push({ x, y, gi });
+      L.top = Math.min(L.top, y); L.bottom = Math.max(L.bottom, y);
+      minX = Math.min(minX, x); maxX = Math.max(maxX, x);
+    }
+    // Stack the lines tightly (fonts leave uneven space above the glyphs).
+    const cells = [];
+    let offset = 0;
+    for (const L of lines) {
+      if (L.bottom < 0) continue;
+      for (const c2 of L.cells) cells.push({ x: c2.x, y: c2.y - L.top + offset, gi: c2.gi });
+      offset += L.bottom - L.top + 1 + LOGO_LINE_SPACE;
+    }
+    if (!cells.length) return;
+    const minY = 0, maxY = offset - LOGO_LINE_SPACE - 1;
+    LOGO_W = maxX - minX + 1; LOGO_H = maxY + 1;
+    logoBlocks = cells.map(({ x, y, gi }) => ({
+      x: x - minX, y: y - minY, type: LOGO_TYPES[gi % LOGO_TYPES.length],
+      delay: gi * 110 + (maxY - y) * 8 + Math.random() * 80,
     }));
-  });
+    logoDone = Math.max(...logoBlocks.map(b => b.delay)) + 450;
+    logoCache = null;
+  }
   let logoT = 0;
+
+  function paintLogoBlocks(ctx, t) {
+    const s = logoCell, th = THEMES[0];
+    for (const b of logoBlocks) {
+      const k = Math.min(1, Math.max(0, (t - b.delay) / 420));
+      if (k <= 0) continue;
+      const ease = 1 - Math.pow(1 - k, 3);
+      drawBlock(ctx, b.x * s, (b.y - (1 - ease) * 16) * s + s * 0.5, s, th.colors[b.type], k, 'glass');
+    }
+  }
 
   function drawLogo(dt) {
     logoT += dt;
-    const s = logoCell;
-    lctx.clearRect(0, 0, LOGO_W * s, 6 * s);
-    const th = THEMES[0];
-    for (const b of logoBlocks) {
-      const k = Math.min(1, Math.max(0, (logoT - b.delay) / 420));
-      if (k <= 0) continue;
-      const ease = 1 - Math.pow(1 - k, 3);
-      const y = (b.y - (1 - ease) * 7) * s + s * 0.5;
-      const bob = Math.sin((logoT / 900) + b.x * 0.35) * s * 0.06;
-      drawBlock(lctx, b.x * s, y + bob, s, th.colors[b.type], k, 'glass');
+    const s = logoCell, w = LOGO_W * s, h = (LOGO_H + 1) * s;
+    lctx.clearRect(0, 0, w, h);
+    if (logoT < logoDone) {
+      paintLogoBlocks(lctx, logoT);
+    } else {
+      // Once every block has landed, draw them once into a cache and reuse it.
+      if (!logoCache) {
+        logoCache = document.createElement('canvas');
+        const cctx = logoCache.getContext('2d');
+        setupCanvas(logoCache, cctx, w, h);
+        paintLogoBlocks(cctx, Infinity);
+      }
+      lctx.drawImage(logoCache, 0, 0, w, h);
     }
     // periodic light sweep
     const sweep = ((logoT / 2600) % 1.6) - 0.3;
@@ -1138,7 +1191,7 @@
       g.addColorStop(1, 'rgba(255,255,255,0)');
       lctx.globalCompositeOperation = 'source-atop';
       lctx.fillStyle = g;
-      lctx.fillRect(0, 0, LOGO_W * s, 6 * s);
+      lctx.fillRect(0, 0, LOGO_W * s, (LOGO_H + 1) * s);
       lctx.globalCompositeOperation = 'source-over';
     }
   }
@@ -2550,7 +2603,14 @@
 
   // ---------- Boot ----------
   window.addEventListener('resize', layout);
+  buildLogo();
   layout();
+  // Rebuild the logo once the display font has loaded (it falls back to a system font until then).
+  if (document.fonts && document.fonts.load) {
+    document.fonts.load(`${LOGO_PX}px "Black Han Sans"`, '성모테트리스').then(() => {
+      buildLogo(); layout(); logoT = 0;
+    }).catch(() => {});
+  }
   bgA.style.background = gradientOf(THEMES[0]);
   setAmbient(THEMES[0].ambient);
   rebuildKeymap();

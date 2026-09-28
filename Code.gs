@@ -1,9 +1,9 @@
 /**
- * Seongmo Tetris - Google Apps Script 웹 앱.
+ * 성모테트리스 - Google Apps Script 웹 앱.
  * 같은 프로젝트에 HTML 파일 "index"(index.html)가 있어야 합니다.
  *
  * 온라인 순위표는 스크립트가 처음 점수를 저장할 때 만드는 Google 스프레드시트
- * ("Seongmo Tetris 순위표")에 기록됩니다. 이미 있는 시트를 쓰려면
+ * ("성모테트리스 순위표")에 기록됩니다. 이미 있는 시트를 쓰려면
  * 프로젝트 설정 > 스크립트 속성에 SHEET_ID 를 넣어 주세요.
  */
 
@@ -14,7 +14,7 @@ var TOP_N = 10;
 
 function doGet() {
   return HtmlService.createHtmlOutputFromFile('index')
-    .setTitle('Seongmo Tetris')
+    .setTitle('성모테트리스')
     // HtmlService는 HTML 안의 viewport 메타 태그를 무시하므로 여기서 지정합니다.
     .addMetaTag('viewport', 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no');
 }
@@ -27,7 +27,7 @@ function getSheet_() {
     try { ss = SpreadsheetApp.openById(id); } catch (e) { ss = null; }
   }
   if (!ss) {
-    ss = SpreadsheetApp.create('Seongmo Tetris 순위표');
+    ss = SpreadsheetApp.create('성모테트리스 순위표');
     props.setProperty('SHEET_ID', ss.getId());
   }
   var sh = ss.getSheetByName(SHEET_NAME);
