@@ -514,7 +514,7 @@
     <div class="row">
       <label for="s-das">이동 시작 지연 (DAS)</label><output id="o-das"></output>
       <input type="range" id="s-das" min="50" max="300" step="5">
-      <small>좌우 키를 누른 뒤 연속 이동이 시작되기까지의 시간</small>
+      <small>좌우 키를 누른 뒤 연속 이동이 시작되기까지의 시간. 너무 짧으면 한 번 눌러도 두 칸씩 갈 수 있어요 (터치 버튼은 최소 230ms)</small>
     </div>
     <div class="row">
       <label for="s-arr">연속 이동 간격 (ARR)</label><output id="o-arr"></output>
@@ -750,14 +750,18 @@
   };
   const cloneKeys = k => JSON.parse(JSON.stringify(k));
   const RESERVED_KEYS = new Set(['Escape', 'Enter', 'KeyP', 'KeyM', 'Tab']);
-  const DEFAULT_SETTINGS = { ver: 2, das: 120, arr: 25, sdf: 15, ghost: true, grid: true, shake: true, fx: true, skin: 'auto' };
+  const DEFAULT_SETTINGS = { ver: 3, das: 165, arr: 30, sdf: 20, ghost: true, grid: true, shake: true, fx: true, skin: 'auto' };
+  // Touch taps last longer than key taps, so on-screen buttons never auto-repeat sooner than this.
+  const TOUCH_DAS = 230, TOUCH_ARR = 45;
+  // Soft drop moves one row at once, then waits briefly before repeating so a quick tap moves exactly one row.
+  const SOFT_DELAY = 90, TOUCH_SOFT_DELAY = 150;
   const storedSettings = store.get('seongmo-tetris-settings', {});
-  // Version 1 shipped slower handling defaults; upgrade them unless the player changed them.
-  if (storedSettings.ver !== 2) {
-    if (storedSettings.das === 170) delete storedSettings.das;
-    if (storedSettings.arr === 50) delete storedSettings.arr;
-    if (storedSettings.sdf === 35) delete storedSettings.sdf;
-    storedSettings.ver = 2;
+  // Earlier versions shipped other handling defaults; move to the current ones unless the player changed them.
+  if (storedSettings.ver !== 3) {
+    if (storedSettings.das === 170 || storedSettings.das === 120) delete storedSettings.das;
+    if (storedSettings.arr === 50 || storedSettings.arr === 25) delete storedSettings.arr;
+    if (storedSettings.sdf === 35 || storedSettings.sdf === 15) delete storedSettings.sdf;
+    storedSettings.ver = 3;
   }
   const settings = Object.assign({}, DEFAULT_SETTINGS, storedSettings);
   settings.keys = Object.assign(cloneKeys(DEFAULT_KEYS), storedSettings.keys || {});
@@ -2285,17 +2289,22 @@
   //  Input
   // =====================================================================
   const held = { left: false, right: false, soft: false };
-  let dasDir = 0, dasTimer = 0, arrTimer = 0, softTimer = 0;
+  let dasDir = 0, dasTimer = 0, arrTimer = 0, softTimer = 0, dasTouch = false, softTouch = false;
 
-  function press(act) {
+  function press(act, fromTouch) {
     const live = state === 'playing' && cur && !clearing;
     if (act === 'left' || act === 'right') {
       held[act] = true;
-      dasDir = act === 'left' ? -1 : 1; dasTimer = 0; arrTimer = 0;
+      dasDir = act === 'left' ? -1 : 1; dasTimer = 0; arrTimer = 0; dasTouch = !!fromTouch;
       if (live) move(dasDir);
       return;
     }
-    if (act === 'soft') { held.soft = true; softTimer = 0; if (live) softDrop(); return; }
+    if (act === 'soft') {
+      held.soft = true; softTouch = !!fromTouch;
+      softTimer = -(fromTouch ? TOUCH_SOFT_DELAY : SOFT_DELAY);
+      if (live) softDrop();
+      return;
+    }
     if (!live) return;
     switch (act) {
       case 'hard': hardDrop(); break;
@@ -2371,8 +2380,8 @@
         if (state === 'playing' || state === 'paused' || state === 'countdown') togglePause();
         return;
       }
-      btn.setPointerCapture(e.pointerId);
-      press(act);
+      try { btn.setPointerCapture(e.pointerId); } catch (err) {}
+      press(act, true);
     });
     const up = () => release(act);
     btn.addEventListener('pointerup', up);
@@ -2420,15 +2429,17 @@
     }
 
     if (dasDir) {
+      const das = dasTouch ? Math.max(settings.das, TOUCH_DAS) : settings.das;
+      const arr = dasTouch ? Math.max(settings.arr, TOUCH_ARR) : settings.arr;
       const before = dasTimer;
       dasTimer += dt;
-      if (dasTimer >= settings.das) {
-        if (settings.arr === 0) {
+      if (dasTimer >= das) {
+        if (arr === 0) {
           while (move(dasDir, true));
         } else {
-          arrTimer += before < settings.das ? settings.arr + (dasTimer - settings.das) : dt;
-          while (arrTimer >= settings.arr) {
-            arrTimer -= settings.arr;
+          arrTimer += before < das ? arr + (dasTimer - das) : dt;
+          while (arrTimer >= arr) {
+            arrTimer -= arr;
             if (!move(dasDir, true)) { arrTimer = 0; break; }
           }
         }
@@ -2439,7 +2450,7 @@
       softTimer += dt;
       while (softTimer >= settings.sdf) {
         softTimer -= settings.sdf;
-        if (!softDrop()) { softTimer = 0; break; }
+        if (!softDrop()) { softTimer = Math.min(softTimer, 0); break; }
       }
     }
 
