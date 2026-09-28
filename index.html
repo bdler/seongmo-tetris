@@ -43,9 +43,7 @@
   .grain {
     position: fixed; inset: -50%; z-index: 0; pointer-events: none; opacity: 0.07;
     background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
-    animation: grain 1.2s steps(6) infinite;
   }
-  @keyframes grain { 0% { transform: translate(0,0); } 50% { transform: translate(-3%, 2%); } 100% { transform: translate(2%, -3%); } }
   .vignette {
     position: fixed; inset: 0; z-index: 0; pointer-events: none;
     background: radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,0.55) 100%);
@@ -77,9 +75,9 @@
     border: 1px solid var(--panel-border);
     border-radius: 4px 14px 4px 14px;
     padding: 10px 12px;
-    -webkit-backdrop-filter: blur(10px);
-    backdrop-filter: blur(10px);
   }
+  /* In-game panels sit on an animated background, so use a solid tint instead of a costly live blur. */
+  .game .box { background: linear-gradient(180deg, var(--panel-hi), transparent 60%), rgba(8, 10, 18, 0.74); }
   .label {
     font-family: var(--f-mono);
     font-size: 10.5px;
@@ -636,7 +634,7 @@
   // =====================================================================
   const COLS = 10, ROWS = 20, HIDDEN = 2, TOTAL = ROWS + HIDDEN;
   const LOCK_DELAY = 500, MAX_LOCK_RESETS = 15;
-  const CLEAR_ANIM = 240, ZONE_CLEAR_ANIM = 700, COUNTDOWN = 1700;
+  const CLEAR_ANIM = 150, ZONE_CLEAR_ANIM = 600, COUNTDOWN = 1500;
   const STAGES = 10, LINES_PER_STAGE = 10, DIG_ROWS = 10;
   const ZONE_PER_LINE = 1 / 24, ZONE_MAX_MS = 20000;
   const GARBAGE_COLOR = '#8b909e', ZONE_COLOR = '#ffffff';
@@ -750,8 +748,15 @@
   };
   const cloneKeys = k => JSON.parse(JSON.stringify(k));
   const RESERVED_KEYS = new Set(['Escape', 'Enter', 'KeyP', 'KeyM', 'Tab']);
-  const DEFAULT_SETTINGS = { das: 170, arr: 50, sdf: 35, ghost: true, grid: true, shake: true, fx: true, skin: 'auto' };
+  const DEFAULT_SETTINGS = { ver: 2, das: 120, arr: 25, sdf: 15, ghost: true, grid: true, shake: true, fx: true, skin: 'auto' };
   const storedSettings = store.get('seongmo-tetris-settings', {});
+  // Version 1 shipped slower handling defaults; upgrade them unless the player changed them.
+  if (storedSettings.ver !== 2) {
+    if (storedSettings.das === 170) delete storedSettings.das;
+    if (storedSettings.arr === 50) delete storedSettings.arr;
+    if (storedSettings.sdf === 35) delete storedSettings.sdf;
+    storedSettings.ver = 2;
+  }
   const settings = Object.assign({}, DEFAULT_SETTINGS, storedSettings);
   settings.keys = Object.assign(cloneKeys(DEFAULT_KEYS), storedSettings.keys || {});
   const saveSettings = () => store.set('seongmo-tetris-settings', settings);
@@ -1290,8 +1295,11 @@
     trails = trails.filter(t => t.life > 0);
     if (lockFlash) { lockFlash.life -= s * 7; if (lockFlash.life <= 0) lockFlash = null; }
     shake = Math.max(0, shake - s * 40);
-    boardWrap.style.transform = shake > 0.2
-      ? `translate(${rand(-shake, shake).toFixed(1)}px, ${rand(-shake, shake).toFixed(1)}px)` : '';
+    if (shake > 0.2) {
+      boardWrap.style.transform = `translate(${rand(-shake, shake).toFixed(1)}px, ${rand(-shake, shake).toFixed(1)}px)`;
+    } else if (boardWrap.style.transform) {
+      boardWrap.style.transform = '';
+    }
   }
 
   function drawFx() {
@@ -2359,12 +2367,13 @@
     }
 
     if (dasDir) {
+      const before = dasTimer;
       dasTimer += dt;
       if (dasTimer >= settings.das) {
         if (settings.arr === 0) {
           while (move(dasDir, true));
         } else {
-          arrTimer += dt;
+          arrTimer += before < settings.das ? settings.arr + (dasTimer - settings.das) : dt;
           while (arrTimer >= settings.arr) {
             arrTimer -= settings.arr;
             if (!move(dasDir, true)) { arrTimer = 0; break; }
