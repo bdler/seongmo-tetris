@@ -1,0 +1,764 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Seongmo Tetris</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --panel: #181b24;
+    --panel-border: #2a2f3d;
+    --grid: #1f2330;
+    --text: #e8eaf0;
+    --muted: #8a90a2;
+    --accent: #6ea8fe;
+    --overlay: rgba(10, 12, 18, 0.82);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: system-ui, -apple-system, "Segoe UI", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    touch-action: manipulation;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  .game {
+    display: grid;
+    grid-template-columns: auto auto auto;
+    gap: 16px;
+    align-items: start;
+    padding: 16px;
+  }
+  .side { display: flex; flex-direction: column; gap: 12px; width: 120px; }
+  .box {
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    border-radius: 10px;
+    padding: 10px;
+  }
+  .label {
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+  .value { font-size: 20px; font-variant-numeric: tabular-nums; font-weight: 600; }
+  .board-wrap { position: relative; }
+  canvas { display: block; }
+  #board {
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    border-radius: 6px;
+  }
+  .overlay {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 12px;
+    background: var(--overlay);
+    border-radius: 6px;
+    text-align: center;
+    padding: 16px;
+  }
+  .overlay.hidden { display: none; }
+  .overlay h1 { margin: 0; font-size: 28px; letter-spacing: 0.04em; }
+  .overlay p { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.6; }
+  button {
+    font: inherit;
+    color: var(--text);
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    border-radius: 8px;
+    padding: 8px 14px;
+    cursor: pointer;
+  }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #0b0d12; font-weight: 700; }
+  .keys { font-size: 12px; color: var(--muted); line-height: 1.8; }
+  .keys b { color: var(--text); font-weight: 600; }
+  .popup {
+    position: absolute; left: 0; right: 0; top: 35%;
+    text-align: center; font-weight: 800; font-size: 22px;
+    color: var(--accent);
+    text-shadow: 0 2px 8px rgba(0,0,0,0.6);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+  .popup.show { opacity: 1; }
+  .touch { display: none; }
+
+  @media (max-width: 640px), (pointer: coarse) {
+    body { align-items: flex-start; }
+    .game {
+      grid-template-columns: 1fr auto 1fr;
+      gap: 8px;
+      padding: 8px 16px;
+      width: 100%;
+    }
+    .side { width: auto; min-width: 64px; gap: 8px; }
+    .box { padding: 6px; }
+    .value { font-size: 15px; }
+    .keys { display: none; }
+    .touch {
+      display: grid;
+      grid-column: 1 / -1;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+    }
+    .touch button { padding: 14px 0; font-size: 20px; }
+  }
+</style>
+</head>
+<body>
+<div class="game">
+  <div class="side">
+    <div class="box">
+      <div class="label">Hold</div>
+      <canvas id="hold"></canvas>
+    </div>
+    <div class="box"><div class="label">점수</div><div class="value" id="score">0</div></div>
+    <div class="box"><div class="label">최고 점수</div><div class="value" id="best">0</div></div>
+    <div class="box"><div class="label">레벨</div><div class="value" id="level">1</div></div>
+    <div class="box"><div class="label">라인</div><div class="value" id="lines">0</div></div>
+  </div>
+
+  <div class="board-wrap">
+    <canvas id="board"></canvas>
+    <div class="popup" id="popup"></div>
+    <div class="overlay" id="overlay">
+      <h1 id="ov-title">TETRIS</h1>
+      <p id="ov-text">Enter 또는 버튼을 눌러 시작하세요</p>
+      <button class="primary" id="ov-btn">시작하기</button>
+    </div>
+  </div>
+
+  <div class="side">
+    <div class="box">
+      <div class="label">Next</div>
+      <canvas id="next"></canvas>
+    </div>
+    <div class="box keys">
+      <b>← →</b> 이동<br>
+      <b>↓</b> 소프트 드롭<br>
+      <b>Space</b> 하드 드롭<br>
+      <b>↑ / X</b> 시계 회전<br>
+      <b>Z</b> 반시계 회전<br>
+      <b>C / Shift</b> 홀드<br>
+      <b>P / Esc</b> 일시정지
+    </div>
+  </div>
+
+  <div class="touch">
+    <button data-act="ccw">↺</button>
+    <button data-act="hold">H</button>
+    <button data-act="pause">Ⅱ</button>
+    <button data-act="cw">↻</button>
+    <button data-act="left">◀</button>
+    <button data-act="soft">▼</button>
+    <button data-act="hard">⤓</button>
+    <button data-act="right">▶</button>
+  </div>
+</div>
+
+<script>
+(() => {
+  'use strict';
+
+  const COLS = 10, ROWS = 20, HIDDEN = 2, TOTAL = ROWS + HIDDEN;
+  const DAS = 170, ARR = 50, SOFT_RATE = 35, LOCK_DELAY = 500, MAX_LOCK_RESETS = 15;
+  const CLEAR_ANIM = 180;
+
+  const COLORS = {
+    I: '#3fd0e0', O: '#f4d03f', T: '#b05ce6', S: '#58d36b',
+    Z: '#ef5b5b', J: '#4d7cf0', L: '#f39c3d',
+  };
+
+  // Spawn orientation shapes (SRS). Rotation is computed by rotating the matrix.
+  const SHAPES = {
+    I: [[0,0,0,0],[1,1,1,1],[0,0,0,0],[0,0,0,0]],
+    O: [[1,1],[1,1]],
+    T: [[0,1,0],[1,1,1],[0,0,0]],
+    S: [[0,1,1],[1,1,0],[0,0,0]],
+    Z: [[1,1,0],[0,1,1],[0,0,0]],
+    J: [[1,0,0],[1,1,1],[0,0,0]],
+    L: [[0,0,1],[1,1,1],[0,0,0]],
+  };
+
+  // SRS wall kicks, (x, y) with y pointing up. Key: "from>to".
+  const KICKS_JLSTZ = {
+    '0>1': [[0,0],[-1,0],[-1,1],[0,-2],[-1,-2]],
+    '1>0': [[0,0],[1,0],[1,-1],[0,2],[1,2]],
+    '1>2': [[0,0],[1,0],[1,-1],[0,2],[1,2]],
+    '2>1': [[0,0],[-1,0],[-1,1],[0,-2],[-1,-2]],
+    '2>3': [[0,0],[1,0],[1,1],[0,-2],[1,-2]],
+    '3>2': [[0,0],[-1,0],[-1,-1],[0,2],[-1,2]],
+    '3>0': [[0,0],[-1,0],[-1,-1],[0,2],[-1,2]],
+    '0>3': [[0,0],[1,0],[1,1],[0,-2],[1,-2]],
+  };
+  const KICKS_I = {
+    '0>1': [[0,0],[-2,0],[1,0],[-2,-1],[1,2]],
+    '1>0': [[0,0],[2,0],[-1,0],[2,1],[-1,-2]],
+    '1>2': [[0,0],[-1,0],[2,0],[-1,2],[2,-1]],
+    '2>1': [[0,0],[1,0],[-2,0],[1,-2],[-2,1]],
+    '2>3': [[0,0],[2,0],[-1,0],[2,1],[-1,-2]],
+    '3>2': [[0,0],[-2,0],[1,0],[-2,-1],[1,2]],
+    '3>0': [[0,0],[1,0],[-2,0],[1,-2],[-2,1]],
+    '0>3': [[0,0],[-1,0],[2,0],[-1,2],[2,-1]],
+  };
+
+  function rotateCW(m) {
+    const n = m.length;
+    return m.map((row, y) => row.map((_, x) => m[n - 1 - x][y]));
+  }
+  const ROTATIONS = {};
+  for (const k in SHAPES) {
+    const r = [SHAPES[k]];
+    for (let i = 1; i < 4; i++) r.push(rotateCW(r[i - 1]));
+    ROTATIONS[k] = r;
+  }
+
+  // ---------- DOM ----------
+  const $ = id => document.getElementById(id);
+  const boardCv = $('board'), holdCv = $('hold'), nextCv = $('next');
+  const bctx = boardCv.getContext('2d'), hctx = holdCv.getContext('2d'), nctx = nextCv.getContext('2d');
+  const overlay = $('overlay'), ovTitle = $('ov-title'), ovText = $('ov-text'), ovBtn = $('ov-btn');
+  const popup = $('popup');
+
+  let cell = 30;
+  let previewCell = 18;
+
+  function setupCanvas(cv, ctx, w, h) {
+    const dpr = window.devicePixelRatio || 1;
+    cv.width = Math.round(w * dpr);
+    cv.height = Math.round(h * dpr);
+    cv.style.width = w + 'px';
+    cv.style.height = h + 'px';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+
+  function layout() {
+    const mobile = window.matchMedia('(max-width: 640px), (pointer: coarse)').matches;
+    const vw = window.innerWidth, vh = window.innerHeight;
+    let byH, byW;
+    if (mobile) {
+      byH = (vh - 16 - 130) / ROWS;          // leave room for touch pad
+      byW = (vw - 32 - 2 * 72 - 16) / COLS;  // side columns
+      previewCell = 11;
+    } else {
+      byH = (vh - 40) / ROWS;
+      byW = (vw - 2 * 120 - 64) / COLS;
+      previewCell = 18;
+    }
+    cell = Math.max(12, Math.floor(Math.min(byH, byW, 36)));
+    setupCanvas(boardCv, bctx, COLS * cell, ROWS * cell);
+    setupCanvas(holdCv, hctx, previewCell * 5, previewCell * 3);
+    setupCanvas(nextCv, nctx, previewCell * 5, previewCell * 3 * 5);
+    draw();
+  }
+
+  // ---------- State ----------
+  let board, bag, queue, cur, holdType, holdUsed;
+  let score, lines, level, combo, b2b, best;
+  let state = 'menu'; // menu | playing | paused | over
+  let dropTimer, lockTimer, lockResets, lowestY, lastRotate;
+  let clearing = null; // { rows, t }
+  let popupTimer = 0;
+
+  try { best = parseInt(localStorage.getItem('seongmo-tetris-best') || '0', 10) || 0; } catch (e) { best = 0; }
+  $('best').textContent = best;
+
+  function emptyBoard() {
+    return Array.from({ length: TOTAL }, () => Array(COLS).fill(null));
+  }
+
+  function refillBag() {
+    const b = Object.keys(SHAPES);
+    for (let i = b.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [b[i], b[j]] = [b[j], b[i]];
+    }
+    return b;
+  }
+
+  function nextType() {
+    while (queue.length < 6) {
+      if (!bag.length) bag = refillBag();
+      queue.push(bag.pop());
+    }
+    return queue.shift();
+  }
+
+  function makePiece(type) {
+    const size = ROTATIONS[type][0].length;
+    return { type, rot: 0, x: Math.floor((COLS - size) / 2), y: type === 'I' ? -1 : 0 };
+  }
+
+  function cells(p, rot = p.rot, x = p.x, y = p.y) {
+    const m = ROTATIONS[p.type][rot];
+    const out = [];
+    for (let r = 0; r < m.length; r++)
+      for (let c = 0; c < m.length; c++)
+        if (m[r][c]) out.push([x + c, y + r]);
+    return out;
+  }
+
+  function fits(p, rot = p.rot, x = p.x, y = p.y) {
+    for (const [cx, cy] of cells(p, rot, x, y)) {
+      if (cx < 0 || cx >= COLS || cy >= TOTAL) return false;
+      if (cy >= 0 && board[cy][cx]) return false;
+    }
+    return true;
+  }
+
+  function gravityMs() {
+    return Math.max(16, Math.pow(0.8 - (level - 1) * 0.007, level - 1) * 1000);
+  }
+
+  function spawn(type) {
+    cur = makePiece(type || nextType());
+    dropTimer = 0; lockTimer = 0; lockResets = 0; lowestY = cur.y; lastRotate = false;
+    if (!fits(cur)) { gameOver(); return; }
+    // Drop one row immediately if possible so the piece appears promptly.
+    if (fits(cur, cur.rot, cur.x, cur.y + 1)) cur.y++;
+  }
+
+  function newGame() {
+    board = emptyBoard();
+    bag = []; queue = [];
+    holdType = null; holdUsed = false;
+    score = 0; lines = 0; level = 1; combo = -1; b2b = false;
+    clearing = null;
+    updateStats();
+    spawn();
+    state = 'playing';
+    hideOverlay();
+  }
+
+  // ---------- Movement ----------
+  function onGround() { return !fits(cur, cur.rot, cur.x, cur.y + 1); }
+
+  function resetLock() {
+    if (onGround() && lockResets < MAX_LOCK_RESETS) { lockTimer = 0; lockResets++; }
+  }
+
+  function move(dx) {
+    if (fits(cur, cur.rot, cur.x + dx, cur.y)) {
+      cur.x += dx; lastRotate = false; resetLock();
+      return true;
+    }
+    return false;
+  }
+
+  function rotate(dir) {
+    if (cur.type === 'O') return;
+    const from = cur.rot, to = (from + dir + 4) % 4;
+    const table = (cur.type === 'I' ? KICKS_I : KICKS_JLSTZ)[from + '>' + to];
+    for (const [kx, ky] of table) {
+      const nx = cur.x + kx, ny = cur.y - ky;
+      if (fits(cur, to, nx, ny)) {
+        cur.x = nx; cur.y = ny; cur.rot = to;
+        lastRotate = true;
+        resetLock();
+        return;
+      }
+    }
+  }
+
+  function softDrop() {
+    if (fits(cur, cur.rot, cur.x, cur.y + 1)) {
+      cur.y++; score += 1; dropTimer = 0; lastRotate = false;
+      trackLowest();
+      updateStats();
+      return true;
+    }
+    return false;
+  }
+
+  function hardDrop() {
+    let n = 0;
+    while (fits(cur, cur.rot, cur.x, cur.y + 1)) { cur.y++; n++; }
+    if (n) lastRotate = false;
+    score += n * 2;
+    lock();
+  }
+
+  function trackLowest() {
+    if (cur.y > lowestY) { lowestY = cur.y; lockResets = 0; }
+  }
+
+  function hold() {
+    if (holdUsed) return;
+    const t = cur.type;
+    if (holdType) spawn(holdType); else spawn();
+    holdType = t;
+    holdUsed = true;
+  }
+
+  // T-spin detection using the 3-corner rule.
+  function tSpinKind() {
+    if (cur.type !== 'T' || !lastRotate) return null;
+    const cx = cur.x + 1, cy = cur.y + 1;
+    const filled = (x, y) => x < 0 || x >= COLS || y >= TOTAL || (y >= 0 && !!board[y][x]);
+    const corners = [[cx-1, cy-1], [cx+1, cy-1], [cx+1, cy+1], [cx-1, cy+1]];
+    const occ = corners.map(([x, y]) => filled(x, y));
+    if (occ.filter(Boolean).length < 3) return null;
+    // Front corners depend on rotation: 0 up, 1 right, 2 down, 3 left.
+    const front = [[0, 1], [1, 2], [2, 3], [3, 0]][cur.rot];
+    return occ[front[0]] && occ[front[1]] ? 'full' : 'mini';
+  }
+
+  function lock() {
+    const spin = tSpinKind();
+    let aboveTop = true;
+    for (const [x, y] of cells(cur)) {
+      if (y >= 0) board[y][x] = cur.type;
+      if (y >= HIDDEN) aboveTop = false;
+    }
+    const full = [];
+    for (let y = 0; y < TOTAL; y++) if (board[y].every(Boolean)) full.push(y);
+
+    scoreClear(full.length, spin);
+    holdUsed = false;
+    cur = null;
+
+    if (aboveTop && !full.length) { gameOver(); return; }
+
+    if (full.length) {
+      clearing = { rows: full, t: 0 };
+    } else {
+      spawn();
+    }
+  }
+
+  function finishClear() {
+    const rows = new Set(clearing.rows);
+    const kept = board.filter((_, y) => !rows.has(y));
+    while (kept.length < TOTAL) kept.unshift(Array(COLS).fill(null));
+    board = kept;
+    clearing = null;
+    spawn();
+  }
+
+  function scoreClear(n, spin) {
+    const base = spin === 'full' ? [400, 800, 1200, 1600][n]
+               : spin === 'mini' ? [100, 200, 400][n] || 400
+               : [0, 100, 300, 500, 800][n];
+    let pts = base * level;
+    let msg = [];
+    const difficult = n === 4 || (spin && n > 0);
+
+    if (n > 0) {
+      if (difficult && b2b) { pts = Math.floor(pts * 1.5); msg.push('BACK-TO-BACK'); }
+      b2b = difficult ? true : false;
+      combo++;
+      if (combo > 0) { pts += 50 * combo * level; }
+    } else {
+      combo = -1;
+    }
+    score += pts;
+
+    if (spin) msg.push(spin === 'mini' ? 'T-SPIN MINI' : 'T-SPIN');
+    if (n) msg.push(['', 'SINGLE', 'DOUBLE', 'TRIPLE', 'TETRIS'][n]);
+    if (combo > 0) msg.push(combo + ' COMBO');
+    if (msg.length && (spin || n >= 2 || combo > 0)) showPopup(msg.join(' '));
+
+    lines += n;
+    level = Math.floor(lines / 10) + 1;
+    updateStats();
+  }
+
+  function showPopup(text) {
+    popup.textContent = text;
+    popup.classList.add('show');
+    popupTimer = 1100;
+  }
+
+  function updateStats() {
+    $('score').textContent = score.toLocaleString();
+    $('lines').textContent = lines;
+    $('level').textContent = level;
+    if (score > best) {
+      best = score;
+      $('best').textContent = best.toLocaleString();
+      try { localStorage.setItem('seongmo-tetris-best', String(best)); } catch (e) {}
+    }
+  }
+
+  // ---------- Overlay / states ----------
+  function showOverlay(title, text, btn) {
+    ovTitle.textContent = title; ovText.innerHTML = text; ovBtn.textContent = btn;
+    overlay.classList.remove('hidden');
+  }
+  function hideOverlay() { overlay.classList.add('hidden'); }
+
+  function gameOver() {
+    state = 'over';
+    cur = null;
+    showOverlay('GAME OVER', `점수 <b>${score.toLocaleString()}</b> · 라인 ${lines} · 레벨 ${level}`, '다시 하기');
+  }
+
+  function togglePause() {
+    if (state === 'playing') {
+      state = 'paused';
+      releaseAll();
+      showOverlay('일시정지', 'P 또는 Esc로 계속하기', '계속하기');
+    } else if (state === 'paused') {
+      state = 'playing';
+      hideOverlay();
+    }
+  }
+
+  ovBtn.addEventListener('click', () => {
+    if (state === 'paused') togglePause(); else newGame();
+    ovBtn.blur();
+  });
+
+  // ---------- Input ----------
+  // Held actions with DAS/ARR handled in the game loop.
+  const held = { left: false, right: false, soft: false };
+  let dasDir = 0, dasTimer = 0, arrTimer = 0, softTimer = 0;
+
+  function press(act) {
+    if (state !== 'playing' || !cur || clearing) {
+      if (act === 'left' || act === 'right' || act === 'soft') held[act] = true;
+      if (act === 'left' || act === 'right') { dasDir = act === 'left' ? -1 : 1; dasTimer = 0; arrTimer = 0; }
+      return;
+    }
+    switch (act) {
+      case 'left': case 'right':
+        held[act] = true;
+        dasDir = act === 'left' ? -1 : 1; dasTimer = 0; arrTimer = 0;
+        move(dasDir);
+        break;
+      case 'soft': held.soft = true; softTimer = 0; softDrop(); break;
+      case 'hard': hardDrop(); break;
+      case 'cw': rotate(1); break;
+      case 'ccw': rotate(-1); break;
+      case 'hold': hold(); break;
+    }
+  }
+
+  function release(act) {
+    if (!(act in held)) return;
+    held[act] = false;
+    if (act === 'left' || act === 'right') {
+      const other = act === 'left' ? 'right' : 'left';
+      if (held[other]) { dasDir = other === 'left' ? -1 : 1; dasTimer = 0; arrTimer = 0; }
+      else dasDir = 0;
+    }
+  }
+
+  function releaseAll() { held.left = held.right = held.soft = false; dasDir = 0; }
+
+  const KEYMAP = {
+    ArrowLeft: 'left', ArrowRight: 'right', ArrowDown: 'soft',
+    ' ': 'hard', ArrowUp: 'cw', x: 'cw', X: 'cw', z: 'ccw', Z: 'ccw', Control: 'ccw',
+    c: 'hold', C: 'hold', Shift: 'hold',
+  };
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'p' || e.key === 'P' || e.key === 'Escape') {
+      e.preventDefault(); togglePause(); return;
+    }
+    if (e.key === 'Enter' && (state === 'menu' || state === 'over')) {
+      e.preventDefault(); newGame(); return;
+    }
+    const act = KEYMAP[e.key];
+    if (!act) return;
+    e.preventDefault();
+    if (e.repeat) return;
+    press(act);
+  });
+  document.addEventListener('keyup', e => {
+    const act = KEYMAP[e.key];
+    if (act) release(act);
+  });
+  window.addEventListener('blur', () => { releaseAll(); if (state === 'playing') togglePause(); });
+
+  document.querySelectorAll('.touch button').forEach(btn => {
+    const act = btn.dataset.act;
+    btn.addEventListener('pointerdown', e => {
+      e.preventDefault();
+      if (act === 'pause') {
+        if (state === 'menu' || state === 'over') newGame(); else togglePause();
+        return;
+      }
+      btn.setPointerCapture(e.pointerId);
+      press(act);
+    });
+    const up = () => release(act);
+    btn.addEventListener('pointerup', up);
+    btn.addEventListener('pointercancel', up);
+    btn.addEventListener('contextmenu', e => e.preventDefault());
+  });
+
+  // ---------- Loop ----------
+  function update(dt) {
+    if (popupTimer > 0) {
+      popupTimer -= dt;
+      if (popupTimer <= 0) popup.classList.remove('show');
+    }
+    if (state !== 'playing') return;
+
+    if (clearing) {
+      clearing.t += dt;
+      if (clearing.t >= CLEAR_ANIM) finishClear();
+      return;
+    }
+    if (!cur) return;
+
+    // Horizontal auto-repeat
+    if (dasDir) {
+      dasTimer += dt;
+      if (dasTimer >= DAS) {
+        arrTimer += dt;
+        while (arrTimer >= ARR) {
+          arrTimer -= ARR;
+          if (!move(dasDir)) { arrTimer = 0; break; }
+        }
+      }
+    }
+
+    // Soft drop repeat
+    if (held.soft) {
+      softTimer += dt;
+      while (softTimer >= SOFT_RATE) {
+        softTimer -= SOFT_RATE;
+        if (!softDrop()) { softTimer = 0; break; }
+      }
+    }
+
+    // Gravity
+    dropTimer += dt;
+    const g = gravityMs();
+    while (dropTimer >= g) {
+      dropTimer -= g;
+      if (fits(cur, cur.rot, cur.x, cur.y + 1)) { cur.y++; lastRotate = false; trackLowest(); }
+      else { dropTimer = 0; break; }
+    }
+
+    // Lock delay
+    if (onGround()) {
+      lockTimer += dt;
+      if (lockTimer >= LOCK_DELAY || lockResets >= MAX_LOCK_RESETS && lockTimer >= LOCK_DELAY / 5) lock();
+    } else {
+      lockTimer = 0;
+    }
+  }
+
+  // ---------- Rendering ----------
+  function shade(hex, amt) {
+    const n = parseInt(hex.slice(1), 16);
+    let r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+    const f = v => Math.max(0, Math.min(255, Math.round(v + (amt > 0 ? (255 - v) * amt : v * amt))));
+    return `rgb(${f(r)},${f(g)},${f(b)})`;
+  }
+
+  function drawBlock(ctx, x, y, s, color, alpha = 1) {
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = color;
+    ctx.fillRect(x + 1, y + 1, s - 2, s - 2);
+    ctx.fillStyle = shade(color, 0.35);
+    ctx.fillRect(x + 1, y + 1, s - 2, Math.max(2, s * 0.14));
+    ctx.fillStyle = shade(color, -0.3);
+    ctx.fillRect(x + 1, y + s - 1 - Math.max(2, s * 0.14), s - 2, Math.max(2, s * 0.14));
+    ctx.globalAlpha = 1;
+  }
+
+  function drawGhostBlock(ctx, x, y, s, color) {
+    ctx.strokeStyle = color;
+    ctx.globalAlpha = 0.55;
+    ctx.lineWidth = 2;
+    ctx.strokeRect(x + 2, y + 2, s - 4, s - 4);
+    ctx.globalAlpha = 1;
+  }
+
+  function cssVar(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+
+  function draw() {
+    const W = COLS * cell, H = ROWS * cell;
+    bctx.clearRect(0, 0, W, H);
+
+    // grid
+    bctx.strokeStyle = cssVar('--grid');
+    bctx.lineWidth = 1;
+    bctx.beginPath();
+    for (let x = 1; x < COLS; x++) { bctx.moveTo(x * cell + 0.5, 0); bctx.lineTo(x * cell + 0.5, H); }
+    for (let y = 1; y < ROWS; y++) { bctx.moveTo(0, y * cell + 0.5); bctx.lineTo(W, y * cell + 0.5); }
+    bctx.stroke();
+
+    if (!board) return;
+
+    const clearingRows = clearing ? new Set(clearing.rows) : null;
+    for (let y = HIDDEN; y < TOTAL; y++) {
+      for (let x = 0; x < COLS; x++) {
+        const t = board[y][x];
+        if (!t) continue;
+        if (clearingRows && clearingRows.has(y)) {
+          const k = clearing.t / CLEAR_ANIM;
+          drawBlock(bctx, x * cell, (y - HIDDEN) * cell, cell, '#ffffff', 1 - k);
+        } else {
+          drawBlock(bctx, x * cell, (y - HIDDEN) * cell, cell, COLORS[t]);
+        }
+      }
+    }
+
+    if (cur && state !== 'over') {
+      let gy = cur.y;
+      while (fits(cur, cur.rot, cur.x, gy + 1)) gy++;
+      const color = COLORS[cur.type];
+      for (const [x, y] of cells(cur, cur.rot, cur.x, gy))
+        if (y >= HIDDEN) drawGhostBlock(bctx, x * cell, (y - HIDDEN) * cell, cell, color);
+      // Fade the active piece slightly as the lock delay runs out.
+      const fade = onGround() ? 1 - 0.35 * Math.min(1, lockTimer / LOCK_DELAY) : 1;
+      for (const [x, y] of cells(cur))
+        if (y >= HIDDEN) drawBlock(bctx, x * cell, (y - HIDDEN) * cell, cell, color, fade);
+    }
+
+    drawPreviews();
+  }
+
+  function drawMini(ctx, type, ox, oy, boxW, boxH, dim) {
+    const m = ROTATIONS[type][0];
+    let minX = 9, maxX = -1, minY = 9, maxY = -1;
+    for (let r = 0; r < m.length; r++) for (let c = 0; c < m.length; c++) if (m[r][c]) {
+      minX = Math.min(minX, c); maxX = Math.max(maxX, c); minY = Math.min(minY, r); maxY = Math.max(maxY, r);
+    }
+    const s = previewCell;
+    const w = (maxX - minX + 1) * s, h = (maxY - minY + 1) * s;
+    const sx = ox + (boxW - w) / 2, sy = oy + (boxH - h) / 2;
+    for (let r = minY; r <= maxY; r++) for (let c = minX; c <= maxX; c++) if (m[r][c])
+      drawBlock(ctx, sx + (c - minX) * s, sy + (r - minY) * s, s, dim ? '#6b7080' : COLORS[type]);
+  }
+
+  function drawPreviews() {
+    const bw = previewCell * 5, bh = previewCell * 3;
+    hctx.clearRect(0, 0, bw, bh);
+    if (holdType) drawMini(hctx, holdType, 0, 0, bw, bh, holdUsed);
+    nctx.clearRect(0, 0, bw, bh * 5);
+    if (queue) queue.slice(0, 5).forEach((t, i) => drawMini(nctx, t, 0, i * bh, bw, bh, false));
+  }
+
+  let last = performance.now();
+  function frame(now) {
+    const dt = Math.min(100, now - last);
+    last = now;
+    update(dt);
+    draw();
+    requestAnimationFrame(frame);
+  }
+
+  window.addEventListener('resize', layout);
+  layout();
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
