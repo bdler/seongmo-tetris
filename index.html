@@ -387,52 +387,104 @@
     .map::before { display: none; }
   }
 
-  @media (max-width: 640px), (pointer: coarse) {
-    body { align-items: flex-start; }
-    .game {
-      grid-template-columns: auto 74px;
-      grid-template-rows: auto auto auto auto 1fr auto;
-      grid-template-areas: "mstats mstats" "board hold" "board next" "board zone" "board ." "touch touch";
-      justify-content: center;
-      gap: 8px;
-      padding: 8px 16px;
-      width: 100%;
-    }
-    .board-wrap::before, .board-wrap::after { inset: -4px; }
-    .side { display: contents; }
-    .hold-box { grid-area: hold; }
-    .next-box { grid-area: next; }
-    .zone-box { grid-area: zone; }
-    .zone-hint { display: none; }
-    .mstats { display: grid; grid-area: mstats; grid-template-columns: repeat(4, 1fr) 40px; gap: 6px; }
-    .mstats .value { font-size: 15px; white-space: nowrap; }
-    .mstats button { padding: 0; font-size: 16px; }
-    .box { padding: 6px 7px; border-radius: 3px 10px 3px 10px; }
-    .label { font-size: 9px; margin-bottom: 3px; letter-spacing: 0.1em; }
-    .label::before { width: 4px; height: 4px; }
-    .desktop-only { display: none !important; }
-    .touch {
-      display: grid;
-      grid-area: touch;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 8px;
-    }
-    .touch button { padding: 14px 0; font-size: 20px; background: var(--panel); font-family: var(--f-mono); font-weight: 700; }
-    .touch button[data-act=zone] { font-size: 13px; letter-spacing: 0.1em; }
-    .banner .b2 { font-size: 28px; }
-    .popup.big { font-size: 24px; }
-    .popup.huge { font-size: 28px; }
-    .menu-keys { display: none; }
-    .menu-foot button { font-size: 12px; padding: 10px 4px; white-space: nowrap; }
-    .mode { padding: 14px; grid-template-columns: 40px 1fr; }
-    .mode .icon { width: 40px; height: 40px; }
-    .mode .kbd { display: none; }
-    .mode .m-title { font-size: 21px; }
-    .mode.mini { grid-template-columns: 1fr; padding: 12px 14px; }
-    .mode.mini .icon { display: none; }
-    .mode.mini .m-title, .mode.mini .m-desc, .mode.mini .m-best { grid-column: 1; }
-    .mode.mini .m-title { font-size: 19px; }
+  /* ---------- Phone ---------- */
+  body.phone { align-items: flex-start; }
+  body.phone .game {
+    grid-template-columns: auto 74px;
+    grid-template-rows: auto auto auto auto 1fr auto;
+    grid-template-areas: "mstats mstats" "board hold" "board next" "board zone" "board ." "touch touch";
+    justify-content: center;
+    gap: 8px;
+    padding: 8px 16px;
+    width: 100%;
   }
+  body.phone .board-wrap::before, body.phone .board-wrap::after { inset: -4px; }
+  body.phone .side { display: contents; }
+  body.phone .hold-box { grid-area: hold; }
+  body.phone .next-box { grid-area: next; }
+  body.phone .zone-box { grid-area: zone; }
+  body.phone .zone-hint { display: none; }
+  body.phone .mstats { display: grid; grid-area: mstats; grid-template-columns: repeat(4, 1fr) 40px; gap: 6px; }
+  body.phone .mstats .value { font-size: 15px; white-space: nowrap; }
+  body.phone .mstats button { padding: 0; font-size: 16px; }
+  body.phone .box { padding: 6px 7px; border-radius: 3px 10px 3px 10px; }
+  body.phone .label { font-size: 9px; margin-bottom: 3px; letter-spacing: 0.1em; }
+  body.phone .label::before { width: 4px; height: 4px; }
+  body.phone .desktop-only { display: none !important; }
+  body.phone .touch {
+    display: grid;
+    grid-area: touch;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+  }
+  body.phone .touch button { padding: 14px 0; font-size: 20px; background: var(--panel); font-family: var(--f-mono); font-weight: 700; }
+  body.phone .touch button[data-act=zone] { font-size: 13px; letter-spacing: 0.1em; }
+  body.phone .banner .b2 { font-size: 28px; }
+  body.phone .popup.big { font-size: 24px; }
+  body.phone .popup.huge { font-size: 28px; }
+  body.phone .menu-keys { display: none; }
+  body.phone .menu-foot button { font-size: 12px; padding: 10px 4px; white-space: nowrap; }
+  body.phone .mode { padding: 14px; grid-template-columns: 40px 1fr; }
+  body.phone .mode .icon { width: 40px; height: 40px; }
+  body.phone .mode .kbd { display: none; }
+  body.phone .mode .m-title { font-size: 21px; }
+  body.phone .mode.mini { grid-template-columns: 1fr; padding: 12px 14px; }
+  body.phone .mode.mini .icon { display: none; }
+  body.phone .mode.mini .m-title, body.phone .mode.mini .m-desc, body.phone .mode.mini .m-best { grid-column: 1; }
+  body.phone .mode.mini .m-title { font-size: 19px; }
+  body.phone .pad { display: contents; }
+  body.phone .touch [data-act=ccw] { order: 1; }
+  body.phone .touch [data-act=hold] { order: 2; }
+  body.phone .touch [data-act=zone] { order: 3; }
+  body.phone .touch [data-act=cw] { order: 4; }
+  body.phone .touch [data-act=left] { order: 5; }
+  body.phone .touch [data-act=soft] { order: 6; }
+  body.phone .touch [data-act=hard] { order: 7; }
+  body.phone .touch [data-act=right] { order: 8; }
+
+  /* ---------- Tablet: two thumb pads ---------- */
+  body.tablet .game { gap: 22px; padding: 16px; }
+  body.tablet .keys, body.tablet .menu-keys, body.tablet .mode .kbd { display: none; }
+  body.tablet .touch { display: flex; grid-area: touch; justify-content: space-between; align-items: flex-end; }
+  body.tablet .pad { display: grid; gap: 10px; }
+  body.tablet .pad-move {
+    grid-template-columns: repeat(3, var(--pb)); grid-template-rows: repeat(3, var(--pb));
+    grid-template-areas: ". hard ." "left . right" ". soft .";
+  }
+  body.tablet .pad-rot {
+    grid-template-columns: repeat(2, var(--pb)); grid-template-rows: repeat(3, var(--pb));
+    grid-template-areas: "hold zone" "ccw cw" "ccw cw";
+  }
+  body.tablet .touch [data-act=hard] { grid-area: hard; }
+  body.tablet .touch [data-act=left] { grid-area: left; }
+  body.tablet .touch [data-act=right] { grid-area: right; }
+  body.tablet .touch [data-act=soft] { grid-area: soft; }
+  body.tablet .touch [data-act=hold] { grid-area: hold; }
+  body.tablet .touch [data-act=zone] { grid-area: zone; }
+  body.tablet .touch [data-act=ccw] { grid-area: ccw; }
+  body.tablet .touch [data-act=cw] { grid-area: cw; }
+  body.tablet .touch button {
+    width: 100%; height: 100%; padding: 0;
+    font-family: var(--f-mono); font-weight: 700; font-size: calc(var(--pb) * 0.34);
+    background: rgba(8, 10, 18, 0.62); border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 20px; touch-action: none; -webkit-touch-callout: none;
+    transition: background 0.08s, transform 0.08s;
+  }
+  body.tablet .touch button:active { background: var(--glow); transform: scale(0.95); }
+  body.tablet .touch [data-act=hard] { border-color: var(--accent); color: var(--accent); }
+  body.tablet .touch [data-act=cw], body.tablet .touch [data-act=ccw] { font-size: calc(var(--pb) * 0.5); }
+  body.tablet .touch [data-act=hold], body.tablet .touch [data-act=zone] { font-size: calc(var(--pb) * 0.2); letter-spacing: 0.08em; }
+  /* portrait: HUD beside the board, pads underneath at both edges */
+  body.tablet.portrait .game { grid-template-areas: "left board right" "touch touch touch"; row-gap: 22px; }
+  /* landscape: each pad sits under its HUD column, next to the board */
+  body.tablet.landscape .game {
+    grid-template-rows: 1fr auto;
+    grid-template-areas: "left board right" "padL board padR";
+  }
+  body.tablet.landscape .touch { display: contents; }
+  body.tablet.landscape .pad-move { grid-area: padL; align-self: end; justify-self: center; }
+  body.tablet.landscape .pad-rot { grid-area: padR; align-self: end; justify-self: center; }
+  body.tablet.landscape .side { width: calc(var(--pb) * 3 + 20px); }
 </style>
 </head>
 <body class="in-menu">
@@ -614,14 +666,18 @@
   </div>
 
   <div class="touch">
-    <button data-act="ccw">↺</button>
-    <button data-act="hold">HOLD</button>
-    <button data-act="zone">ZONE</button>
-    <button data-act="cw">↻</button>
-    <button data-act="left">◀</button>
-    <button data-act="soft">▼</button>
-    <button data-act="hard">⤓</button>
-    <button data-act="right">▶</button>
+    <div class="pad pad-move">
+      <button data-act="hard" aria-label="하드 드롭">⤓</button>
+      <button data-act="left" aria-label="왼쪽">◀</button>
+      <button data-act="right" aria-label="오른쪽">▶</button>
+      <button data-act="soft" aria-label="소프트 드롭">▼</button>
+    </div>
+    <div class="pad pad-rot">
+      <button data-act="hold">HOLD</button>
+      <button data-act="zone">ZONE</button>
+      <button data-act="ccw" aria-label="반시계 회전">↺</button>
+      <button data-act="cw" aria-label="시계 회전">↻</button>
+    </div>
   </div>
 </div>
 
@@ -984,20 +1040,48 @@
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   }
 
+  let device = 'desktop';
+  function detectDevice() {
+    const coarse = window.matchMedia('(pointer: coarse)').matches;
+    if (coarse) return Math.min(vw, vh) >= 600 ? 'tablet' : 'phone';
+    return vw <= 640 ? 'phone' : 'desktop';
+  }
+
   function layout() {
-    const mobile = window.matchMedia('(max-width: 640px), (pointer: coarse)').matches;
     vw = window.innerWidth; vh = window.innerHeight;
-    let byH, byW;
-    if (mobile) {
+    device = detectDevice();
+    const landscape = vw > vh;
+    const bc = document.body.classList;
+    bc.toggle('phone', device === 'phone');
+    bc.toggle('tablet', device === 'tablet');
+    bc.toggle('landscape', device === 'tablet' && landscape);
+    bc.toggle('portrait', device === 'tablet' && !landscape);
+    let byH, byW, maxCell = 36;
+    if (device === 'phone') {
       byH = (vh - 16 - 58 - 130 - 16) / ROWS;
       byW = (vw - 32 - 74 - 8) / COLS;
       previewCell = 11;
+    } else if (device === 'tablet') {
+      // Thumb-sized buttons scale with the screen.
+      const pb = Math.round(Math.max(60, Math.min(84, Math.min(vw, vh) * 0.095)));
+      document.documentElement.style.setProperty('--pb', pb + 'px');
+      const padSide = 3 * pb + 20;
+      if (landscape) {
+        byH = (vh - 40) / ROWS;
+        byW = (vw - 32 - 2 * padSide - 2 * 22) / COLS;
+      } else {
+        byH = (vh - 32 - padSide - 22) / ROWS;
+        byW = (vw - 32 - 2 * 150 - 2 * 22) / COLS;
+      }
+      previewCell = 18;
+      maxCell = 44;
     } else {
       byH = (vh - 48) / ROWS;
       byW = (vw - 2 * 136 - 72) / COLS;
       previewCell = 18;
     }
-    cell = Math.max(12, Math.floor(Math.min(byH, byW, 36)));
+    cell = Math.max(12, Math.floor(Math.min(byH, byW, maxCell)));
+    $('pause-btn').textContent = device === 'desktop' ? '일시정지 (P)' : 'Ⅱ  일시정지';
     setupCanvas(boardCv, bctx, COLS * cell, ROWS * cell);
     setupCanvas(holdCv, hctx, previewCell * 5, previewCell * 3);
     setupCanvas(nextCv, nctx, previewCell * 5, previewCell * 3 * 5);
@@ -1782,7 +1866,7 @@
     segs.forEach((b, i) => { b.style.width = Math.max(0, Math.min(1, shown * 4 - i)) * 100 + '%'; });
     const ready = !zoneActive && zoneMeter >= 0.25;
     $('zone-box').classList.toggle('ready', ready);
-    setHud('zone-hint', zoneActive ? '발동 중' : ready ? 'E 키로 발동' : '줄을 지워 충전');
+    setHud('zone-hint', zoneActive ? '발동 중' : ready ? (device === 'desktop' ? 'E 키로 발동' : 'ZONE 버튼으로 발동') : '줄을 지워 충전');
     $('zone-timer').style.width = zoneActive ? (zoneTime / zoneTotal * 100) + '%' : '0';
   }
 
@@ -1998,7 +2082,7 @@
   }
 
   function showPause() {
-    showOverlay('일시정지', '<p>P 또는 Esc로 계속하기</p>', [
+    showOverlay('일시정지', device === 'desktop' ? '<p>P 또는 Esc로 계속하기</p>' : '<p>잠시 쉬어 가세요</p>', [
       { label: '계속하기', fn: togglePause },
       { label: '다시 시작', fn: () => newGame() },
       { label: '설정', fn: openSettings },
@@ -2614,6 +2698,7 @@
 
   // ---------- Boot ----------
   window.addEventListener('resize', layout);
+  window.addEventListener('orientationchange', () => setTimeout(layout, 150));
   buildLogo();
   layout();
   // Rebuild the logo once the display font has loaded (it falls back to a system font until then).
