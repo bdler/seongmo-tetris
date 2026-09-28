@@ -227,7 +227,8 @@
   }
 
   .count {
-    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    position: absolute; inset: 0; display: flex; align-items: flex-start; justify-content: center;
+    padding-top: 22%;
     pointer-events: none; z-index: 2;
     font-family: var(--f-mono); font-weight: 700; font-size: 44px; letter-spacing: 0.2em;
     text-shadow: 0 0 24px var(--accent);
@@ -282,6 +283,12 @@
   .node.on .dot span { color: #fff; }
   .node.on .nm { color: var(--text); }
   .mode-list { display: flex; flex-direction: column; gap: 10px; }
+  .mode-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .mode.mini { grid-template-columns: 34px 1fr; gap: 2px 12px; padding: 13px 14px; }
+  .mode.mini .icon { width: 34px; height: 34px; }
+  .mode.mini .m-title { font-size: 20px; }
+  .mode.mini .m-title small { margin-left: 5px; }
+  .mode.mini .kbd { display: none; }
   .mode {
     text-align: left;
     display: grid; grid-template-columns: 46px 1fr auto; gap: 2px 16px; align-items: center;
@@ -315,14 +322,14 @@
   .menu-keys b { color: var(--text); font-family: var(--f-mono); }
 
   /* ---------- Settings ---------- */
-  #settings {
+  #settings, #ranks {
     position: fixed; inset: 0; z-index: 8; display: none;
     background: rgba(3, 4, 8, 0.7);
     -webkit-backdrop-filter: blur(6px);
     backdrop-filter: blur(6px);
     overflow-y: auto; padding: 24px 16px;
   }
-  #settings.open { display: flex; }
+  #settings.open, #ranks.open { display: flex; }
   .settings-card {
     margin: auto; width: 100%; max-width: 420px;
     background: rgba(10, 12, 20, 0.92); border: 1px solid var(--panel-border);
@@ -344,6 +351,33 @@
   .switch input:checked + span { background: var(--accent); }
   .switch input:checked + span::after { transform: translateX(20px); }
   .settings-actions { display: flex; gap: 8px; margin-top: 18px; }
+  .skins { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .skin { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 4px; font-size: 12px; }
+  .skin.on { border-color: var(--accent); box-shadow: 0 0 14px var(--glow); }
+  .keyrow { display: grid; grid-template-columns: 1fr 78px 78px; gap: 6px; align-items: center; padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,0.06); font-size: 14px; }
+  .keybtn { font-family: var(--f-mono); font-size: 12px; font-weight: 700; padding: 6px 4px; }
+  .keybtn.empty { color: var(--muted); }
+  .keybtn.wait { border-color: var(--accent); color: var(--accent); animation: blink 0.8s ease-in-out infinite; }
+  .kb-hint { display: block; font-size: 11.5px; color: var(--muted); margin-top: 8px; }
+  .tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+  .tabs button { font-size: 13px; padding: 7px 11px; }
+  .tabs button.on { background: var(--accent); border-color: var(--accent); color: #0b0d12; font-weight: 700; }
+  .rank-list { list-style: none; margin: 0; padding: 0; min-height: 120px; }
+  .rank-list li { display: grid; grid-template-columns: 30px 1fr auto; gap: 10px; align-items: baseline; padding: 9px 2px; border-bottom: 1px solid rgba(255,255,255,0.06); }
+  .rank-list .rk { font-family: var(--f-mono); font-weight: 700; color: var(--muted); }
+  .rank-list li:nth-child(-n+3) .rk { color: var(--accent); }
+  .rank-list .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .rank-list .nm small { color: var(--muted); font-size: 11px; margin-left: 6px; }
+  .rank-list .vl { font-family: var(--f-mono); font-weight: 700; }
+  .rank-empty { color: var(--muted); font-size: 13px; padding: 24px 0; text-align: center; }
+  .submit { display: flex; gap: 6px; width: 100%; max-width: 240px; }
+  .submit input {
+    flex: 1; min-width: 0; font: inherit; font-size: 14px; color: var(--text);
+    background: rgba(255,255,255,0.06); border: 1px solid var(--panel-border); border-radius: 3px 10px 3px 10px; padding: 8px 10px;
+  }
+  .submit input:focus { outline: none; border-color: var(--accent); }
+  .submit button { font-size: 13px; padding: 8px 10px; white-space: nowrap; }
+  .submit-msg { font-size: 13px; color: var(--accent); min-height: 1em; }
   .settings-actions button { flex: 1; }
 
   @media (max-width: 860px) {
@@ -390,10 +424,15 @@
     .popup.big { font-size: 24px; }
     .popup.huge { font-size: 28px; }
     .menu-keys { display: none; }
+    .menu-foot button { font-size: 12px; padding: 10px 4px; white-space: nowrap; }
     .mode { padding: 14px; grid-template-columns: 40px 1fr; }
     .mode .icon { width: 40px; height: 40px; }
     .mode .kbd { display: none; }
     .mode .m-title { font-size: 21px; }
+    .mode.mini { grid-template-columns: 1fr; padding: 12px 14px; }
+    .mode.mini .icon { display: none; }
+    .mode.mini .m-title, .mode.mini .m-desc, .mode.mini .m-best { grid-column: 1; }
+    .mode.mini .m-title { font-size: 19px; }
   }
 </style>
 </head>
@@ -438,16 +477,30 @@
           <div class="m-best" data-best="dig"></div>
           <div class="kbd">3</div>
         </button>
+        <div class="mode-row">
+          <button class="mode mini" data-mode="sprint">
+            <svg class="icon" viewBox="0 0 44 44" aria-hidden="true"><path d="M25 4 L10 25 H21 L18 40 L34 18 H23 Z" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/></svg>
+            <div class="m-title">스프린트<small>40L</small></div>
+            <div class="m-desc">40줄을 가장 빨리</div>
+            <div class="m-best" data-best="sprint"></div>
+            <div class="kbd">4</div>
+          </button>
+          <button class="mode mini" data-mode="ultra">
+            <svg class="icon" viewBox="0 0 44 44" aria-hidden="true"><circle cx="22" cy="25" r="14" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M22 25 L22 16 M17 5 H27 M22 5 V11" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+            <div class="m-title">울트라<small>2MIN</small></div>
+            <div class="m-desc">2분 동안 최고 점수</div>
+            <div class="m-best" data-best="ultra"></div>
+            <div class="kbd">5</div>
+          </button>
+        </div>
       </div>
       <div class="menu-foot">
         <button class="t-sfx">효과음</button>
         <button class="t-bgm">배경음</button>
+        <button class="open-ranks">순위표</button>
         <button class="open-settings">설정</button>
       </div>
-      <div class="menu-keys">
-        <b>← →</b> 이동 · <b>↓</b> 소프트 드롭 · <b>Space</b> 하드 드롭 · <b>↑ X / Z</b> 회전<br>
-        <b>C</b> 홀드 · <b>E</b> 존 발동 · <b>P</b> 일시정지 · <b>M</b> 소리 · <b>1 2 3</b> 모드 바로 시작
-      </div>
+      <div class="menu-keys" id="menu-keys"></div>
     </div>
   </div>
 </div>
@@ -477,12 +530,31 @@
     <div class="row"><label for="s-grid">격자 표시</label><div class="switch"><input type="checkbox" id="s-grid"><span></span></div></div>
     <div class="row"><label for="s-shake">화면 흔들림</label><div class="switch"><input type="checkbox" id="s-shake"><span></span></div></div>
     <div class="row"><label for="s-fx">배경 효과·파티클</label><div class="switch"><input type="checkbox" id="s-fx"><span></span></div></div>
+    <div class="set-group">SKIN</div>
+    <div class="skins" id="skins"></div>
+    <div class="set-group">KEYS</div>
+    <div id="keybinds"></div>
+    <small class="kb-hint">버튼을 누른 뒤 원하는 키를 누르세요 · Backspace 지우기 · Esc 취소<br>P(일시정지)·M(소리)·Enter·Esc는 바꿀 수 없어요</small>
     <div class="set-group">SOUND</div>
     <div class="row"><label for="s-sfx">효과음</label><div class="switch"><input type="checkbox" id="s-sfx"><span></span></div></div>
     <div class="row"><label for="s-bgm">배경음</label><div class="switch"><input type="checkbox" id="s-bgm"><span></span></div></div>
     <div class="settings-actions">
       <button id="s-reset">기본값</button>
       <button class="primary" id="s-close">닫기</button>
+    </div>
+  </div>
+</div>
+
+<!-- ---------- Leaderboard ---------- -->
+<div id="ranks">
+  <div class="settings-card">
+    <h2>순위표</h2>
+    <p class="hint" id="rank-hint">모드별 상위 10명</p>
+    <div class="tabs" id="rank-tabs"></div>
+    <ol class="rank-list" id="rank-list"></ol>
+    <div class="settings-actions">
+      <button id="r-refresh">새로고침</button>
+      <button class="primary" id="r-close">닫기</button>
     </div>
   </div>
 </div>
@@ -538,16 +610,7 @@
       <div class="progress"><div id="stage-bar"></div></div>
     </div>
     <div class="box desktop-only"><div class="label" data-hud="lines-label">라인</div><div class="value" data-hud="lines">0</div></div>
-    <div class="box keys desktop-only">
-      <b>← →</b> 이동<br>
-      <b>↓</b> 소프트 드롭<br>
-      <b>Space</b> 하드 드롭<br>
-      <b>↑ / X</b> 시계 회전<br>
-      <b>Z</b> 반시계 회전<br>
-      <b>C</b> 홀드<br>
-      <b>E</b> 존 발동<br>
-      <b>P</b> 일시정지 · <b>M</b> 소리
-    </div>
+    <div class="box keys desktop-only" id="keys-help"></div>
   </div>
 
   <div class="touch">
@@ -655,7 +718,19 @@
       colors: { I: '#6fe8ff', O: '#ffe04f', T: '#d77bff', S: '#8ff05a', Z: '#ff4f4f', J: '#4f8aff', L: '#ff9a2f' },
       music: { root: 62, scale: 'major', bpm: 140, prog: [0, 4, 5, 3] } },
   ];
-  const DIG_THEME = 3;
+  const DIG_THEME = 3, SPRINT_THEME = 6, ULTRA_THEME = 5;
+  const SPRINT_LINES = 40, ULTRA_MS = 120000;
+  const MODE_INFO = {
+    journey: { name: '저니', zone: true },
+    zen: { name: '젠', zone: true },
+    dig: { name: '디그', timed: true },
+    sprint: { name: '스프린트', timed: true },
+    ultra: { name: '울트라' },
+  };
+  const MODE_ORDER = ['journey', 'zen', 'dig', 'sprint', 'ultra'];
+  // "timed" modes rank by fastest completion time, the rest by score.
+  const isTimed = m => !!MODE_INFO[m].timed;
+  const zoneAllowed = () => !!MODE_INFO[mode].zone;
 
   const store = {
     get(key, fallback) {
@@ -664,8 +739,21 @@
     set(key, val) { try { localStorage.setItem(key, JSON.stringify(val)); } catch (e) {} },
   };
 
-  const DEFAULT_SETTINGS = { das: 170, arr: 50, sdf: 35, ghost: true, grid: true, shake: true, fx: true };
-  const settings = Object.assign({}, DEFAULT_SETTINGS, store.get('seongmo-tetris-settings', {}));
+  // Keys are stored as KeyboardEvent.code so they keep working with a Korean IME.
+  const ACTIONS = [
+    ['left', '왼쪽 이동'], ['right', '오른쪽 이동'], ['soft', '소프트 드롭'], ['hard', '하드 드롭'],
+    ['cw', '시계 회전'], ['ccw', '반시계 회전'], ['hold', '홀드'], ['zone', '존 발동'],
+  ];
+  const DEFAULT_KEYS = {
+    left: ['ArrowLeft'], right: ['ArrowRight'], soft: ['ArrowDown'], hard: ['Space'],
+    cw: ['ArrowUp', 'KeyX'], ccw: ['KeyZ', 'ControlLeft'], hold: ['KeyC', 'ShiftLeft'], zone: ['KeyE'],
+  };
+  const cloneKeys = k => JSON.parse(JSON.stringify(k));
+  const RESERVED_KEYS = new Set(['Escape', 'Enter', 'KeyP', 'KeyM', 'Tab']);
+  const DEFAULT_SETTINGS = { das: 170, arr: 50, sdf: 35, ghost: true, grid: true, shake: true, fx: true, skin: 'auto' };
+  const storedSettings = store.get('seongmo-tetris-settings', {});
+  const settings = Object.assign({}, DEFAULT_SETTINGS, storedSettings);
+  settings.keys = Object.assign(cloneKeys(DEFAULT_KEYS), storedSettings.keys || {});
   const saveSettings = () => store.set('seongmo-tetris-settings', settings);
 
   // =====================================================================
@@ -933,7 +1021,9 @@
     ctx.closePath();
   }
 
-  function drawBlock(ctx, x, y, s, color, alpha = 1, style = theme.style) {
+  const currentSkin = () => settings.skin && settings.skin !== 'auto' ? settings.skin : theme.style;
+
+  function drawBlock(ctx, x, y, s, color, alpha = 1, style = currentSkin()) {
     ctx.globalAlpha = alpha;
     const e = Math.max(2, s * 0.14);
     switch (style) {
@@ -1249,7 +1339,7 @@
     bgFront.style.opacity = 0;
     bgFront = back;
     setAmbient(theme.ambient);
-    const intensity = mode === 'zen' ? 0 : mode === 'dig' ? 1 : i < 3 ? 0 : i < 6 ? 1 : 2;
+    const intensity = mode === 'zen' ? 0 : mode === 'dig' ? 1 : mode === 'sprint' || mode === 'ultra' ? 2 : i < 3 ? 0 : i < 6 ? 1 : 2;
     Sound.setMusic(theme.music, intensity);
     setHud('stage-name', theme.name);
   }
@@ -1364,14 +1454,14 @@
     releaseAll();
     Sound.muffle(false);
 
-    $('zone-box').classList.toggle('hidden', mode === 'dig');
-    document.querySelector('.touch [data-act=zone]').style.visibility = mode === 'dig' ? 'hidden' : '';
+    $('zone-box').classList.toggle('hidden', !zoneAllowed());
+    document.querySelector('.touch [data-act=zone]').style.visibility = zoneAllowed() ? '' : 'hidden';
     if (mode === 'dig') {
       addGarbage(DIG_ROWS);
       garbageLeft = countGarbage();
       applyTheme(DIG_THEME);
     } else {
-      applyTheme(0);
+      applyTheme(mode === 'sprint' ? SPRINT_THEME : mode === 'ultra' ? ULTRA_THEME : 0);
     }
     updateHud();
     hideOverlay();
@@ -1393,6 +1483,8 @@
     if (started) return;
     started = true;
     if (mode === 'dig') showBanner('DIG', `${DIG_ROWS}줄을 파내세요`);
+    else if (mode === 'sprint') showBanner('SPRINT', `${SPRINT_LINES}줄을 가장 빠르게`);
+    else if (mode === 'ultra') showBanner('ULTRA', '2분 동안 최고 점수');
     else showBanner(mode === 'zen' ? 'ZEN' : 'STAGE 1', THEMES[0].name);
     spawn();
   }
@@ -1558,7 +1650,7 @@
 
   // ---------- Zone ----------
   function zoneActivate() {
-    if (zoneActive || mode === 'dig' || zoneMeter < 0.25 || !cur) return;
+    if (zoneActive || !zoneAllowed() || zoneMeter < 0.25 || !cur) return;
     zoneActive = true;
     zoneLines = 0;
     zoneTotal = zoneTime = zoneMeter * ZONE_MAX_MS;
@@ -1644,7 +1736,7 @@
       if (combo > 0) pts += 50 * combo * level;
       stats.maxCombo = Math.max(stats.maxCombo, combo);
       if (n === 4) stats.tetris++;
-      if (mode !== 'dig') zoneMeter = Math.min(1, zoneMeter + n * ZONE_PER_LINE);
+      if (zoneAllowed()) zoneMeter = Math.min(1, zoneMeter + n * ZONE_PER_LINE);
     } else {
       combo = -1;
     }
@@ -1687,6 +1779,15 @@
         showBanner('ZEN', theme.name);
         Sound.play('stage');
       }
+    } else if (mode === 'sprint') {
+      if (lines >= SPRINT_LINES) pendingWin = true;
+    } else if (mode === 'ultra') {
+      const lv = Math.min(15, reached + 1);
+      if (lv !== level) {
+        level = lv;
+        showBanner('LEVEL UP', `레벨 ${level}`);
+        Sound.play('stage');
+      }
     }
   }
 
@@ -1711,14 +1812,14 @@
   function bestText(m) {
     const r = records[m];
     if (!r) return '기록 없음';
-    if (m === 'dig') return 'BEST ' + fmtTime(r.time);
+    if (isTimed(m)) return 'BEST ' + fmtTime(r.time);
     if (m === 'journey') return `BEST ${r.score.toLocaleString()}` + (r.cleared ? ' · 완주' : ` · STAGE ${r.stage}`);
     return 'BEST ' + r.score.toLocaleString();
   }
 
   function updateHud() {
     const r = records[mode];
-    setHud('best', !r ? '-' : mode === 'dig' ? fmtTime(r.time) : r.score.toLocaleString());
+    setHud('best', !r ? '-' : isTimed(mode) ? fmtTime(r.time) : r.score.toLocaleString());
     const inStage = lines % LINES_PER_STAGE;
     if (mode === 'journey') {
       setHud('stage-label', '스테이지');
@@ -1730,6 +1831,17 @@
       setHud('stage-label', '테마');
       setHud('stage', stage + 1);
       $('stage-bar').style.width = inStage * 10 + '%';
+      setHud('lines-label', '라인');
+      setHud('lines', lines);
+    } else if (mode === 'sprint') {
+      setHud('stage-label', '진행');
+      setHud('stage', `${Math.min(lines, SPRINT_LINES)}/${SPRINT_LINES}`);
+      $('stage-bar').style.width = Math.min(1, lines / SPRINT_LINES) * 100 + '%';
+      setHud('lines-label', '남은 줄');
+      setHud('lines', Math.max(0, SPRINT_LINES - lines));
+    } else if (mode === 'ultra') {
+      setHud('stage-label', '레벨');
+      setHud('stage', level);
       setHud('lines-label', '라인');
       setHud('lines', lines);
     } else {
@@ -1773,10 +1885,10 @@
     const r = records[mode];
     let better;
     if (mode === 'journey') records.journeyMax = Math.max(records.journeyMax || 0, cleared ? STAGES : stage + 1);
-    if (mode === 'dig') {
+    if (isTimed(mode)) {
       if (!cleared) { store.set('seongmo-tetris-records', records); return false; }
       better = !r || elapsed < r.time;
-      if (better) records.dig = { time: elapsed };
+      if (better) records[mode] = { time: elapsed };
     } else {
       better = !r || score > r.score;
       if (better) records[mode] = mode === 'journey'
@@ -1791,6 +1903,8 @@
   // ---------- Overlay / states ----------
   let ovList = [];
   function showOverlay(title, html, actions) {
+    popup.classList.remove('show');
+    banner.classList.remove('show');
     ovTitle.textContent = title;
     ovText.innerHTML = html;
     ovActions.innerHTML = '';
@@ -1814,7 +1928,7 @@
       ['테트리스', stats.tetris], ['T-스핀', stats.tspin],
       ['최대 콤보', Math.max(0, stats.maxCombo)], ['최대 존', stats.maxZone],
     ];
-    if (mode === 'dig') items.splice(6, 2, ['놓은 블록', stats.pieces], ['최대 콤보', Math.max(0, stats.maxCombo)]);
+    if (!zoneAllowed()) items.splice(6, 2, ['놓은 블록', stats.pieces], ['최대 콤보', Math.max(0, stats.maxCombo)]);
     return `<div class="stats">${items.map(([k, v]) => `<div><span>${k}</span><strong>${v}</strong></div>`).join('')}</div>`;
   }
 
@@ -1827,11 +1941,33 @@
     ]);
   }
 
-  function endScreen(title, sub, isNew) {
-    showOverlay(title, (isNew ? '<span class="badge">NEW RECORD</span>' : '') + `<p>${sub}</p>` + statsHtml(), [
+  const escHtml = v => String(v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+
+  function endScreen(title, sub, isNew, submittable) {
+    const canSubmit = submittable && Online.available;
+    const form = canSubmit
+      ? `<form class="submit" id="submit-form"><input id="submit-name" maxlength="10" placeholder="이름 (10자)" autocomplete="off" value="${escHtml(store.get('seongmo-tetris-name', ''))}"><button type="submit">순위 등록</button></form><div class="submit-msg" id="submit-msg"></div>`
+      : '';
+    showOverlay(title, (isNew ? '<span class="badge">NEW RECORD</span>' : '') + `<p>${sub}</p>` + statsHtml() + form, [
       { label: '다시 하기', fn: () => newGame() },
       { label: '메뉴로', fn: toMenu },
     ]);
+    if (canSubmit) {
+      const value = isTimed(mode) ? Math.round(elapsed) : score;
+      const submitMode = mode;
+      $('submit-form').addEventListener('submit', e => {
+        e.preventDefault();
+        const input = $('submit-name'), btn = e.target.querySelector('button'), msg = $('submit-msg');
+        const name = input.value.trim();
+        if (!name) { msg.textContent = '이름을 입력해 주세요'; input.focus(); return; }
+        store.set('seongmo-tetris-name', name);
+        btn.disabled = input.disabled = true;
+        msg.textContent = '등록 중…';
+        Online.call('submitScore', submitMode, name, value)
+          .then(r => { msg.textContent = `${r.rank}위로 등록됐어요!`; e.target.remove(); })
+          .catch(err => { msg.textContent = '등록 실패: ' + (err && err.message || err); btn.disabled = input.disabled = false; });
+      });
+    }
   }
 
   function gameOver() {
@@ -1845,7 +1981,7 @@
     const isNew = saveRecord(false);
     const sub = mode === 'journey' ? `STAGE <b>${stage + 1}</b> · ${theme.name}에서 멈췄어요`
       : mode === 'dig' ? `남은 줄 <b>${garbageLeft}</b>` : '';
-    endScreen('GAME OVER', sub, isNew);
+    endScreen('GAME OVER', sub, isNew, !isTimed(mode) && score > 0);
     updateHud();
   }
 
@@ -1862,8 +1998,10 @@
                     vx: rand(-220, 220), vy: rand(-520, -100), life: 1.5, decay: rand(0.5, 0.9),
                     size: rand(4, 9), rot: rand(0, 6.28), vr: rand(-8, 8), color: pick(Object.values(theme.colors)) });
     }
-    if (mode === 'journey') endScreen('여정 완료!', '열 개의 세계를 모두 여행했어요', isNew);
-    else endScreen('클리어!', `쓰레기 줄을 모두 파냈어요 · <b>${fmtTime(elapsed)}</b>`, isNew);
+    if (mode === 'journey') endScreen('여정 완료!', '열 개의 세계를 모두 여행했어요', isNew, true);
+    else if (mode === 'sprint') endScreen('완주!', `${SPRINT_LINES}줄 · <b>${fmtTime(elapsed)}</b>`, isNew, true);
+    else if (mode === 'ultra') endScreen('시간 종료!', `2분 동안 <b>${score.toLocaleString()}</b>점`, isNew, score > 0);
+    else endScreen('클리어!', `쓰레기 줄을 모두 파냈어요 · <b>${fmtTime(elapsed)}</b>`, isNew, true);
     updateHud();
   }
 
@@ -1883,7 +2021,7 @@
   }
 
   function toMenu() {
-    if ((state === 'playing' || state === 'paused') && mode !== 'dig' && score > 0) saveRecord(false);
+    if ((state === 'playing' || state === 'paused') && (mode === 'journey' || mode === 'zen') && score > 0) saveRecord(false);
     state = 'menu';
     cur = null;
     board = null;
@@ -1909,9 +2047,12 @@
     for (const k of ['ghost', 'grid', 'shake', 'fx']) $('s-' + k).checked = settings[k];
     $('s-sfx').checked = Sound.cfg.sfx;
     $('s-bgm').checked = Sound.cfg.bgm;
+    renderSkins();
+    renderKeybinds();
   }
   function openSettings() { syncSettingsUi(); settingsEl.classList.add('open'); }
   function closeSettings() {
+    binding = null;
     settingsEl.classList.remove('open');
     refreshMenu();
     if (state === 'paused') showPause();
@@ -1926,7 +2067,155 @@
   }
   $('s-sfx').addEventListener('change', e => Sound.toggle('sfx', e.target.checked));
   $('s-bgm').addEventListener('change', e => Sound.toggle('bgm', e.target.checked));
-  $('s-reset').addEventListener('click', () => { Object.assign(settings, DEFAULT_SETTINGS); saveSettings(); syncSettingsUi(); });
+  $('s-reset').addEventListener('click', () => {
+    Object.assign(settings, DEFAULT_SETTINGS);
+    settings.keys = cloneKeys(DEFAULT_KEYS);
+    saveSettings(); rebuildKeymap(); syncSettingsUi();
+  });
+
+  const SKINS = [['auto', '자동'], ['bevel', '입체'], ['glass', '유리'], ['round', '둥근'], ['flat', '단색'], ['neon', '네온']];
+  function renderSkins() {
+    const wrap = $('skins');
+    wrap.innerHTML = '';
+    for (const [id, label] of SKINS) {
+      const b = document.createElement('button');
+      b.className = 'skin' + (settings.skin === id ? ' on' : '');
+      const cv = document.createElement('canvas');
+      const ctx = cv.getContext('2d');
+      setupCanvas(cv, ctx, 54, 36);
+      const style = id === 'auto' ? theme.style : id, s = 16;
+      [[0, 1], [1, 1], [2, 1], [1, 0]].forEach(([x, y]) => drawBlock(ctx, 3 + x * s, 2 + y * s, s, theme.colors.T, 1, style));
+      b.appendChild(cv);
+      b.appendChild(document.createTextNode(label));
+      b.addEventListener('click', () => { settings.skin = id; saveSettings(); renderSkins(); });
+      wrap.appendChild(b);
+    }
+  }
+
+  // ----- key bindings -----
+  let codeToAct = {}, binding = null;
+  function keyName(code) {
+    const named = {
+      Space: 'Space', ArrowLeft: '←', ArrowRight: '→', ArrowUp: '↑', ArrowDown: '↓',
+      ShiftLeft: 'L-Shift', ShiftRight: 'R-Shift', ControlLeft: 'L-Ctrl', ControlRight: 'R-Ctrl',
+      AltLeft: 'L-Alt', AltRight: 'R-Alt', Backquote: '`', Minus: '-', Equal: '=', Slash: '/', Period: '.', Comma: ',',
+      Semicolon: ';', Quote: "'", BracketLeft: '[', BracketRight: ']', Backslash: '\\',
+    };
+    if (named[code]) return named[code];
+    if (/^Key[A-Z]$/.test(code)) return code.slice(3);
+    if (/^Digit\d$/.test(code)) return code.slice(5);
+    if (/^Numpad/.test(code)) return 'Num ' + code.slice(6);
+    return code;
+  }
+  function rebuildKeymap() {
+    codeToAct = {};
+    for (const [act] of ACTIONS) for (const code of settings.keys[act] || []) codeToAct[code] = act;
+    renderKeyHelp();
+  }
+  const keysOf = act => (settings.keys[act] || []).map(keyName).join(' / ') || '-';
+  function renderKeyHelp() {
+    $('keys-help').innerHTML = ACTIONS.map(([act, label]) => `<b>${escHtml(keysOf(act))}</b> ${label}`).join('<br>') +
+      '<br><b>P</b> 일시정지 · <b>M</b> 소리';
+    $('menu-keys').innerHTML = ACTIONS.map(([act, label]) => `<b>${escHtml(keysOf(act))}</b> ${label}`).join(' · ') +
+      ' · <b>P</b> 일시정지 · <b>M</b> 소리 · <b>1–5</b> 모드 바로 시작';
+  }
+  function renderKeybinds() {
+    const wrap = $('keybinds');
+    wrap.innerHTML = '';
+    for (const [act, label] of ACTIONS) {
+      const row = document.createElement('div');
+      row.className = 'keyrow';
+      row.appendChild(document.createTextNode(label));
+      for (let slot = 0; slot < 2; slot++) {
+        const code = (settings.keys[act] || [])[slot];
+        const b = document.createElement('button');
+        const waiting = binding && binding.act === act && binding.slot === slot;
+        b.className = 'keybtn' + (waiting ? ' wait' : code ? '' : ' empty');
+        b.textContent = waiting ? '키 입력…' : code ? keyName(code) : '없음';
+        b.addEventListener('click', () => { binding = { act, slot }; renderKeybinds(); });
+        row.appendChild(b);
+      }
+      wrap.appendChild(row);
+    }
+  }
+  function bindKey(code) {
+    const { act, slot } = binding;
+    binding = null;
+    if (code === 'Escape') { renderKeybinds(); return; }
+    const list = (settings.keys[act] || []).slice();
+    if (code === 'Backspace' || code === 'Delete') {
+      list.splice(slot, 1);
+    } else if (!RESERVED_KEYS.has(code)) {
+      for (const [a] of ACTIONS) settings.keys[a] = (settings.keys[a] || []).filter(c => c !== code);
+      const fresh = (settings.keys[act] || []).slice();
+      if (slot < fresh.length) fresh[slot] = code; else fresh.push(code);
+      settings.keys[act] = fresh;
+      saveSettings(); rebuildKeymap(); renderKeybinds();
+      return;
+    }
+    settings.keys[act] = list;
+    saveSettings(); rebuildKeymap(); renderKeybinds();
+  }
+
+  // ----- leaderboard (only when served by Google Apps Script) -----
+  const Online = {
+    available: !!(window.google && google.script && google.script.run),
+    call(fn, ...args) {
+      return new Promise((resolve, reject) => {
+        google.script.run.withSuccessHandler(resolve).withFailureHandler(reject)[fn](...args);
+      });
+    },
+  };
+  const ranksEl = $('ranks');
+  let rankMode = 'journey';
+  function openRanks() {
+    ranksEl.classList.add('open');
+    const tabs = $('rank-tabs');
+    tabs.innerHTML = '';
+    for (const m of MODE_ORDER) {
+      const b = document.createElement('button');
+      b.textContent = MODE_INFO[m].name;
+      b.className = m === rankMode ? 'on' : '';
+      b.addEventListener('click', () => { rankMode = m; openRanks(); });
+      tabs.appendChild(b);
+    }
+    loadRanks();
+  }
+  function loadRanks() {
+    const list = $('rank-list');
+    list.innerHTML = '';
+    const note = t => { const d = document.createElement('div'); d.className = 'rank-empty'; d.textContent = t; list.appendChild(d); };
+    if (!Online.available) {
+      $('rank-hint').textContent = '온라인 순위표는 Google Apps Script 웹 앱으로 배포했을 때만 켜집니다.';
+      const r = records[rankMode];
+      note(r ? `이 기기의 내 최고 기록: ${bestText(rankMode).replace('BEST ', '')}` : '이 기기에 저장된 기록이 없어요');
+      return;
+    }
+    $('rank-hint').textContent = `${MODE_INFO[rankMode].name} · 상위 10명` + (isTimed(rankMode) ? ' (빠른 순)' : ' (높은 점수 순)');
+    note('불러오는 중…');
+    const m = rankMode;
+    Online.call('getLeaderboard', m).then(rows => {
+      if (m !== rankMode) return;
+      list.innerHTML = '';
+      if (!rows || !rows.length) { note('아직 등록된 기록이 없어요. 첫 번째 주인공이 되어 보세요!'); return; }
+      rows.forEach((r, i) => {
+        const li = document.createElement('li');
+        const rk = document.createElement('span'); rk.className = 'rk'; rk.textContent = i + 1;
+        const nm = document.createElement('span'); nm.className = 'nm'; nm.textContent = r.name;
+        const dt = document.createElement('small'); dt.textContent = (r.date || '').slice(0, 10).replace(/-/g, '.');
+        nm.appendChild(dt);
+        const vl = document.createElement('span'); vl.className = 'vl';
+        vl.textContent = isTimed(m) ? fmtTime(r.value) : Number(r.value).toLocaleString();
+        li.append(rk, nm, vl);
+        list.appendChild(li);
+      });
+    }).catch(err => { list.innerHTML = ''; note('불러오지 못했어요: ' + (err && err.message || err)); });
+  }
+  const closeRanks = () => ranksEl.classList.remove('open');
+  $('r-close').addEventListener('click', closeRanks);
+  $('r-refresh').addEventListener('click', loadRanks);
+  ranksEl.addEventListener('click', e => { if (e.target === ranksEl) closeRanks(); });
+  document.querySelectorAll('.open-ranks').forEach(b => b.addEventListener('click', openRanks));
   $('s-close').addEventListener('click', closeSettings);
   settingsEl.addEventListener('click', e => { if (e.target === settingsEl) closeSettings(); });
   document.querySelectorAll('.open-settings').forEach(b => b.addEventListener('click', openSettings));
@@ -1968,12 +2257,7 @@
 
   function releaseAll() { held.left = held.right = held.soft = false; dasDir = 0; }
 
-  const KEYMAP = {
-    ArrowLeft: 'left', ArrowRight: 'right', ArrowDown: 'soft',
-    ' ': 'hard', ArrowUp: 'cw', x: 'cw', X: 'cw', z: 'ccw', Z: 'ccw', Control: 'ccw',
-    c: 'hold', C: 'hold', Shift: 'hold', e: 'zone', E: 'zone',
-  };
-  const MODE_KEYS = { '1': 'journey', '2': 'zen', '3': 'dig' };
+  const MODE_KEYS = { Digit1: 'journey', Digit2: 'zen', Digit3: 'dig', Digit4: 'sprint', Digit5: 'ultra' };
 
   function toggleAllSound() {
     const on = !(Sound.cfg.sfx || Sound.cfg.bgm);
@@ -1982,34 +2266,38 @@
   }
 
   document.addEventListener('keydown', e => {
-    if (settingsEl.classList.contains('open')) {
-      if (e.key === 'Escape') { e.preventDefault(); closeSettings(); }
+    const code = e.code;
+    if (binding) { e.preventDefault(); bindKey(code); return; }
+    if (e.target && e.target.tagName === 'INPUT' && e.target.type !== 'range' && e.target.type !== 'checkbox') return;
+    if (settingsEl.classList.contains('open') || ranksEl.classList.contains('open')) {
+      if (code === 'Escape') { e.preventDefault(); if (ranksEl.classList.contains('open')) closeRanks(); else closeSettings(); }
       return;
     }
-    if (e.key === 'm' || e.key === 'M') { toggleAllSound(); return; }
+    if (code === 'KeyM') { toggleAllSound(); return; }
     if (state === 'menu') {
-      if (MODE_KEYS[e.key]) { e.preventDefault(); newGame(MODE_KEYS[e.key]); }
-      else if (e.key === 'Enter' && !(document.activeElement && document.activeElement.tagName === 'BUTTON')) {
+      if (MODE_KEYS[code]) { e.preventDefault(); newGame(MODE_KEYS[code]); }
+      else if (code === 'Enter' && !(document.activeElement && document.activeElement.tagName === 'BUTTON')) {
         e.preventDefault(); newGame('journey');
       }
       return;
     }
-    if (e.key === 'p' || e.key === 'P' || e.key === 'Escape') {
+    if (code === 'KeyP' || code === 'Escape') {
       e.preventDefault();
       if (state === 'playing' || state === 'paused' || state === 'countdown') togglePause();
       return;
     }
-    if (e.key === 'Enter' && ovList.length) {
+    if (code === 'Enter' && ovList.length) {
+      if (document.activeElement && document.activeElement.tagName === 'BUTTON') return;
       e.preventDefault(); ovList[0].fn(); return;
     }
-    const act = KEYMAP[e.key];
+    const act = codeToAct[code];
     if (!act) return;
     e.preventDefault();
     if (e.repeat) return;
     press(act);
   });
   document.addEventListener('keyup', e => {
-    const act = KEYMAP[e.key];
+    const act = codeToAct[e.code];
     if (act) release(act);
   });
   window.addEventListener('blur', () => { releaseAll(); if (state === 'playing') togglePause(); });
@@ -2051,6 +2339,12 @@
     }
     if (state !== 'playing') return;
     elapsed += dt;
+    if (mode === 'ultra' && elapsed >= ULTRA_MS) {
+      elapsed = ULTRA_MS;
+      if (clearing) { clearing = null; }
+      win();
+      return;
+    }
 
     if (clearing) {
       clearing.t += dt;
@@ -2233,7 +2527,12 @@
         if (Math.abs(score - shownScore) < 1) shownScore = score;
         setHud('score', Math.round(shownScore).toLocaleString());
       }
-      setHud('time', fmtTimeShort(elapsed || 0));
+      if (mode === 'ultra') {
+        setHud('time', fmtTimeShort(Math.max(0, ULTRA_MS - (elapsed || 0)) + 999));
+        $('stage-bar').style.width = Math.min(1, (elapsed || 0) / ULTRA_MS) * 100 + '%';
+      } else {
+        setHud('time', fmtTimeShort(elapsed || 0));
+      }
       if (zoneActive) updateZoneUi();
     }
     drawFx();
@@ -2245,6 +2544,7 @@
   layout();
   bgA.style.background = gradientOf(THEMES[0]);
   setAmbient(THEMES[0].ambient);
+  rebuildKeymap();
   refreshMenu();
   requestAnimationFrame(frame);
 })();
