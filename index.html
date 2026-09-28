@@ -411,14 +411,7 @@
   body.phone .label { font-size: 9px; margin-bottom: 3px; letter-spacing: 0.1em; }
   body.phone .label::before { width: 4px; height: 4px; }
   body.phone .desktop-only { display: none !important; }
-  body.phone .touch {
-    display: grid;
-    grid-area: touch;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 8px;
-  }
-  body.phone .touch button { padding: 14px 0; font-size: 20px; background: var(--panel); font-family: var(--f-mono); font-weight: 700; }
-  body.phone .touch button[data-act=zone] { font-size: 13px; letter-spacing: 0.1em; }
+  body.phone .touch { display: flex; grid-area: touch; justify-content: space-between; align-items: flex-end; }
   body.phone .banner .b2 { font-size: 28px; }
   body.phone .popup.big { font-size: 24px; }
   body.phone .popup.huge { font-size: 28px; }
@@ -432,48 +425,11 @@
   body.phone .mode.mini .icon { display: none; }
   body.phone .mode.mini .m-title, body.phone .mode.mini .m-desc, body.phone .mode.mini .m-best { grid-column: 1; }
   body.phone .mode.mini .m-title { font-size: 19px; }
-  body.phone .pad { display: contents; }
-  body.phone .touch [data-act=ccw] { order: 1; }
-  body.phone .touch [data-act=hold] { order: 2; }
-  body.phone .touch [data-act=zone] { order: 3; }
-  body.phone .touch [data-act=cw] { order: 4; }
-  body.phone .touch [data-act=left] { order: 5; }
-  body.phone .touch [data-act=soft] { order: 6; }
-  body.phone .touch [data-act=hard] { order: 7; }
-  body.phone .touch [data-act=right] { order: 8; }
 
   /* ---------- Tablet: two thumb pads ---------- */
   body.tablet .game { gap: 22px; padding: 16px; }
   body.tablet .keys, body.tablet .menu-keys, body.tablet .mode .kbd { display: none; }
   body.tablet .touch { display: flex; grid-area: touch; justify-content: space-between; align-items: flex-end; }
-  body.tablet .pad { display: grid; gap: 10px; }
-  body.tablet .pad-move {
-    grid-template-columns: repeat(3, var(--pb)); grid-template-rows: repeat(3, var(--pb));
-    grid-template-areas: ". hard ." "left . right" ". soft .";
-  }
-  body.tablet .pad-rot {
-    grid-template-columns: repeat(2, var(--pb)); grid-template-rows: repeat(3, var(--pb));
-    grid-template-areas: "hold zone" "ccw cw" "ccw cw";
-  }
-  body.tablet .touch [data-act=hard] { grid-area: hard; }
-  body.tablet .touch [data-act=left] { grid-area: left; }
-  body.tablet .touch [data-act=right] { grid-area: right; }
-  body.tablet .touch [data-act=soft] { grid-area: soft; }
-  body.tablet .touch [data-act=hold] { grid-area: hold; }
-  body.tablet .touch [data-act=zone] { grid-area: zone; }
-  body.tablet .touch [data-act=ccw] { grid-area: ccw; }
-  body.tablet .touch [data-act=cw] { grid-area: cw; }
-  body.tablet .touch button {
-    width: 100%; height: 100%; padding: 0;
-    font-family: var(--f-mono); font-weight: 700; font-size: calc(var(--pb) * 0.34);
-    background: rgba(8, 10, 18, 0.62); border: 1px solid rgba(255, 255, 255, 0.16);
-    border-radius: 20px; touch-action: none; -webkit-touch-callout: none;
-    transition: background 0.08s, transform 0.08s;
-  }
-  body.tablet .touch button:active { background: var(--glow); transform: scale(0.95); }
-  body.tablet .touch [data-act=hard] { border-color: var(--accent); color: var(--accent); }
-  body.tablet .touch [data-act=cw], body.tablet .touch [data-act=ccw] { font-size: calc(var(--pb) * 0.5); }
-  body.tablet .touch [data-act=hold], body.tablet .touch [data-act=zone] { font-size: calc(var(--pb) * 0.2); letter-spacing: 0.08em; }
   /* portrait: HUD beside the board, pads underneath at both edges */
   body.tablet.portrait .game { grid-template-areas: "left board right" "touch touch touch"; row-gap: 22px; }
   /* landscape: each pad sits under its HUD column, next to the board */
@@ -482,9 +438,59 @@
     grid-template-areas: "left board right" "padL board padR";
   }
   body.tablet.landscape .touch { display: contents; }
+  body.tablet.landscape .game { row-gap: 14px; padding: 10px 16px; }
+  body.tablet.landscape .side { gap: 8px; }
+  body.tablet.landscape .best-box { display: none; }
   body.tablet.landscape .pad-move { grid-area: padL; align-self: end; justify-self: center; }
   body.tablet.landscape .pad-rot { grid-area: padR; align-self: end; justify-self: center; }
-  body.tablet.landscape .side { width: calc(var(--pb) * 3 + 20px); }
+  body.tablet.landscape .side { width: calc(var(--pb) * 3 + var(--pg) * 2); }
+
+  /* ---------- Touch pads (phone + tablet), laid out like Game Boy / DS / Tetris 99 ----------
+     left : ZONE on the shoulder, D-pad below (up = hard drop, down = soft drop)
+     right: HOLD on the shoulder, A (↻ clockwise) upper-right and B (↺ counter-clockwise) lower-left */
+  .pad-move {
+    display: grid; gap: var(--pg);
+    grid-template-columns: repeat(3, var(--pb));
+    grid-template-rows: calc(var(--pb) * 0.62) repeat(3, var(--pb));
+    grid-template-areas: "zone zone zone" ". hard ." "left . right" ". soft .";
+  }
+  .pad-rot {
+    position: relative;
+    width: calc(var(--pb) * 2.6 + var(--pg));
+    height: calc(var(--pb) * 3.62 + var(--pg) * 3);
+  }
+  .touch [data-act=zone] { grid-area: zone; }
+  .touch [data-act=hard] { grid-area: hard; }
+  .touch [data-act=left] { grid-area: left; }
+  .touch [data-act=right] { grid-area: right; }
+  .touch [data-act=soft] { grid-area: soft; }
+  .touch button {
+    width: 100%; height: 100%; padding: 0;
+    font-family: var(--f-mono); font-weight: 700; font-size: calc(var(--pb) * 0.36);
+    background: rgba(8, 10, 18, 0.62); border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: calc(var(--pb) * 0.24); touch-action: none; -webkit-touch-callout: none;
+    transition: background 0.08s, transform 0.08s;
+  }
+  .touch button:active { background: var(--glow); transform: scale(0.95); }
+  .touch [data-act=hard] { border-color: var(--accent); color: var(--accent); }
+  .touch [data-act=zone], .touch [data-act=hold] { font-size: calc(var(--pb) * 0.24); letter-spacing: 0.12em; }
+  .touch [data-act=zone] { border-radius: calc(var(--pb) * 0.42) calc(var(--pb) * 0.14) calc(var(--pb) * 0.14) calc(var(--pb) * 0.14); }
+  .pad-rot [data-act=hold] {
+    position: absolute; left: 0; right: 0; top: 0; width: auto; height: calc(var(--pb) * 0.62);
+    border-radius: calc(var(--pb) * 0.14) calc(var(--pb) * 0.42) calc(var(--pb) * 0.14) calc(var(--pb) * 0.14);
+  }
+  .pad-rot [data-act=cw], .pad-rot [data-act=ccw] {
+    position: absolute; width: calc(var(--pb) * 1.3); height: calc(var(--pb) * 1.3);
+    border-radius: 50%; font-size: calc(var(--pb) * 0.6);
+  }
+  .pad-rot [data-act=cw] { right: 0; top: calc(var(--pb) * 0.97 + var(--pg)); }
+  .pad-rot [data-act=ccw] { left: 0; bottom: 0; }
+  .pad-rot button::after {
+    position: absolute; right: 16%; bottom: 12%;
+    font-size: calc(var(--pb) * 0.2); color: var(--muted); letter-spacing: 0;
+  }
+  .pad-rot [data-act=cw]::after { content: "A"; }
+  .pad-rot [data-act=ccw]::after { content: "B"; }
 </style>
 </head>
 <body class="in-menu">
@@ -632,7 +638,7 @@
       <div class="zone-hint" id="zone-hint">줄을 지워 충전</div>
     </div>
     <div class="box desktop-only"><div class="label">점수</div><div class="value" data-hud="score">0</div></div>
-    <div class="box desktop-only"><div class="label">최고 기록</div><div class="value" data-hud="best">-</div></div>
+    <div class="box desktop-only best-box"><div class="label">최고 기록</div><div class="value" data-hud="best">-</div></div>
     <div class="box desktop-only"><div class="label">시간</div><div class="value" data-hud="time">0:00</div></div>
     <button class="desktop-only" id="pause-btn">일시정지 (P)</button>
   </div>
@@ -667,6 +673,7 @@
 
   <div class="touch">
     <div class="pad pad-move">
+      <button data-act="zone">ZONE</button>
       <button data-act="hard" aria-label="하드 드롭">⤓</button>
       <button data-act="left" aria-label="왼쪽">◀</button>
       <button data-act="right" aria-label="오른쪽">▶</button>
@@ -674,9 +681,8 @@
     </div>
     <div class="pad pad-rot">
       <button data-act="hold">HOLD</button>
-      <button data-act="zone">ZONE</button>
-      <button data-act="ccw" aria-label="반시계 회전">↺</button>
       <button data-act="cw" aria-label="시계 회전">↻</button>
+      <button data-act="ccw" aria-label="반시계 회전">↺</button>
     </div>
   </div>
 </div>
@@ -1047,6 +1053,23 @@
     return vw <= 640 ? 'phone' : 'desktop';
   }
 
+  // Landscape tablets stack the HUD and a thumb pad in each side column. If the HUD is taller than
+  // expected (small screens), shrink the pad buttons so the column still fits beside the board.
+  function fitLandscapePads() {
+    const sides = document.querySelectorAll('.game .side');
+    if (!sides.length || !sides[0].offsetParent) return; // game hidden (menu)
+    let hud = 0;
+    sides.forEach(side => {
+      const kids = [...side.children].filter(k => k.offsetParent);
+      if (!kids.length) return;
+      hud = Math.max(hud, kids[kids.length - 1].getBoundingClientRect().bottom - kids[0].getBoundingClientRect().top);
+    });
+    const pg = 10, room = ROWS * cell - hud - 14;
+    const pb = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--pb')) || 60;
+    const fit = Math.floor((room - 3 * pg) / 3.62);
+    if (fit < pb) document.documentElement.style.setProperty('--pb', Math.max(36, fit) + 'px');
+  }
+
   function layout() {
     vw = window.innerWidth; vh = window.innerHeight;
     device = detectDevice();
@@ -1057,23 +1080,30 @@
     bc.toggle('landscape', device === 'tablet' && landscape);
     bc.toggle('portrait', device === 'tablet' && !landscape);
     let byH, byW, maxCell = 36;
+    // Thumb pads: button size (pb) and gap (pg) scale with the screen.
+    const rootStyle = document.documentElement.style;
+    const setPad = (pb, pg) => {
+      rootStyle.setProperty('--pb', pb + 'px');
+      rootStyle.setProperty('--pg', pg + 'px');
+      return { w: 3 * pb + 2 * pg, h: 3.62 * pb + 3 * pg };
+    };
     if (device === 'phone') {
-      byH = (vh - 16 - 58 - 130 - 16) / ROWS;
+      const pad = setPad(Math.round(Math.max(40, Math.min(54, vh * 0.064, (vw - 32 - 24) / 5.8))), 7);
+      byH = (vh - 16 - 58 - pad.h - 16) / ROWS;
       byW = (vw - 32 - 74 - 8) / COLS;
       previewCell = 11;
     } else if (device === 'tablet') {
-      // Thumb-sized buttons scale with the screen.
-      const pb = Math.round(Math.max(60, Math.min(84, Math.min(vw, vh) * 0.095)));
-      document.documentElement.style.setProperty('--pb', pb + 'px');
-      const padSide = 3 * pb + 20;
+      const pad = setPad(Math.round(Math.max(60, Math.min(84, Math.min(vw, vh) * 0.095))), 10);
       if (landscape) {
         byH = (vh - 40) / ROWS;
-        byW = (vw - 32 - 2 * padSide - 2 * 22) / COLS;
+        byW = (vw - 32 - 2 * pad.w - 2 * 22) / COLS;
+        // The right column stacks NEXT (15 preview rows), stage and lines boxes (~230px) above the pad.
+        previewCell = Math.max(11, Math.min(18, Math.floor((vh - 40 - pad.h - 14 - 230) / 15)));
       } else {
-        byH = (vh - 32 - padSide - 22) / ROWS;
+        byH = (vh - 32 - pad.h - 22) / ROWS;
         byW = (vw - 32 - 2 * 150 - 2 * 22) / COLS;
+        previewCell = 18;
       }
-      previewCell = 18;
       maxCell = 44;
     } else {
       byH = (vh - 48) / ROWS;
@@ -1082,6 +1112,7 @@
     }
     cell = Math.max(12, Math.floor(Math.min(byH, byW, maxCell)));
     $('pause-btn').textContent = device === 'desktop' ? '일시정지 (P)' : 'Ⅱ  일시정지';
+    if (device === 'tablet' && landscape) fitLandscapePads();
     setupCanvas(boardCv, bctx, COLS * cell, ROWS * cell);
     setupCanvas(holdCv, hctx, previewCell * 5, previewCell * 3);
     setupCanvas(nextCv, nctx, previewCell * 5, previewCell * 3 * 5);
