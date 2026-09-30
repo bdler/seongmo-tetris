@@ -459,8 +459,47 @@
   body.phone.swipe .board-wrap { justify-self: center; }
   body.phone.swipe .next-box canvas { margin: 0 auto; }
   body.phone.swipe .zone-box { min-width: 64px; align-self: stretch; }
-  body.tablet.landscape.swipe .side { width: 150px; }
+  body.tablet.swipe .side { width: var(--sidew, 150px); }
   body.tablet.landscape.swipe .best-box { display: block; }
+  /* Tablet touch pads: the empty space under each HUD column becomes a gesture area,
+     so the fingers do not cover the board. */
+  .tpad { display: none; }
+  body.tablet.swipe .side { align-self: stretch; }
+  body.tablet.swipe .tpad {
+    display: flex; flex-direction: column; flex: 1; min-height: 150px; position: relative; overflow: hidden;
+    border: 1.5px dashed color-mix(in srgb, var(--accent) 55%, transparent);
+    border-radius: 6px 20px 6px 20px;
+    background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01)), rgba(8, 10, 18, 0.45);
+    transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+  }
+  body.tablet.swipe .tpad.touching { border-style: solid; border-color: var(--accent); box-shadow: 0 0 24px var(--glow), inset 0 0 30px var(--glow); }
+  .tpad-halves { position: absolute; inset: 0; display: grid; grid-template-columns: 1fr 1fr; pointer-events: none; }
+  .tpad-halves span {
+    display: grid; place-items: center; font-size: 44px; color: rgba(255,255,255,0.1);
+  }
+  .tpad-halves span:first-child { border-right: 1px dashed rgba(255,255,255,0.1); }
+  .tpad-guide {
+    position: relative; margin: auto 10px; padding: 10px 10px; display: flex; flex-direction: column; gap: 7px;
+    background: rgba(4, 6, 12, 0.7); border-radius: 4px 12px 4px 12px; pointer-events: none;
+    font-size: 12px; line-height: 1.3; color: var(--muted);
+  }
+  .tpad-guide div { display: grid; grid-template-columns: 38px 1fr; align-items: baseline; }
+  .tpad-guide b { font-family: var(--f-mono); color: var(--accent); }
+  .tpad-guide span { word-break: keep-all; }
+  .tpad-label {
+    position: relative; margin-top: auto; padding: 8px 0 10px; text-align: center; pointer-events: none;
+    font-family: var(--f-mono); font-size: 10px; font-weight: 700; letter-spacing: 0.3em; color: var(--muted);
+  }
+  .tpad-guide + .tpad-label { margin-top: 0; }
+  .tpad .ripple {
+    position: absolute; width: 16px; height: 16px; margin: -8px 0 0 -8px; border-radius: 50%;
+    border: 2px solid var(--accent); pointer-events: none; animation: ripple 0.45s ease-out forwards;
+  }
+  @keyframes ripple { to { transform: scale(5); opacity: 0; } }
+  @media (max-height: 700px) {
+    body.tablet.swipe .best-box { display: none; }
+    body.tablet.swipe .tpad { min-height: 120px; }
+  }
   .ghint {
     position: absolute; left: 50%; bottom: 7%; transform: translateX(-50%); z-index: 2;
     width: max-content; max-width: 92%;
@@ -684,6 +723,16 @@
     <div class="box desktop-only best-box"><div class="label">최고 기록</div><div class="value" data-hud="best">-</div></div>
     <div class="box desktop-only"><div class="label">시간</div><div class="value" data-hud="time">0:00</div></div>
     <button class="desktop-only" id="pause-btn">일시정지 (P)</button>
+    <div class="tpad tpad-left">
+      <div class="tpad-halves"><span>↺</span><span>↻</span></div>
+      <div class="tpad-guide">
+        <div><b>← →</b><span>밀어서 이동</span></div>
+        <div><b>탭</b><span>↺ 왼쪽 · 오른쪽 ↻</span></div>
+        <div><b>↓</b><span>끌기 · 튕기기</span></div>
+        <div><b>↑</b><span>튕겨서 홀드</span></div>
+      </div>
+      <div class="tpad-label">TOUCH PAD</div>
+    </div>
   </div>
 
   <div class="board-wrap" id="board-wrap" style="grid-area: board">
@@ -719,6 +768,10 @@
     </div>
     <div class="box desktop-only"><div class="label" data-hud="lines-label">라인</div><div class="value" data-hud="lines">0</div></div>
     <div class="box keys desktop-only" id="keys-help"></div>
+    <div class="tpad tpad-right">
+      <div class="tpad-halves"><span>↺</span><span>↻</span></div>
+      <div class="tpad-label">TOUCH PAD</div>
+    </div>
   </div>
 
   <div class="touch">
@@ -1177,6 +1230,13 @@
       previewCell = 18;
     }
     cell = Math.max(12, Math.floor(Math.min(byH, byW, maxCell)));
+    if (device === 'tablet' && swipe) {
+      // Give the spare width to the side columns so the touch pads are thumb-sized.
+      const sidew = Math.max(136, Math.min(260, Math.floor((vw - 32 - COLS * cell - 2 * 22) / 2)));
+      rootStyle.setProperty('--sidew', sidew + 'px');
+      // Keep at least ~150px for the pad under NEXT (15 preview rows) + stage + lines (~220px).
+      previewCell = Math.max(11, Math.min(18, Math.floor((ROWS * cell - 150 - 220) / 15)));
+    }
     $('pause-btn').textContent = device === 'desktop' ? '일시정지 (P)' : 'Ⅱ  일시정지';
     if (device === 'tablet' && landscape && !swipe) fitLandscapePads();
     setupCanvas(boardCv, bctx, COLS * cell, ROWS * cell);
@@ -1721,7 +1781,7 @@
     const seen = store.get('seongmo-tetris-ghint', 0);
     const hint = $('ghint');
     clearTimeout(hint._t);
-    hint.classList.toggle('show', document.body.classList.contains('swipe') && seen < 5);
+    hint.classList.toggle('show', document.body.classList.contains('swipe') && device === 'phone' && seen < 5);
     if (hint.classList.contains('show')) {
       store.set('seongmo-tetris-ghint', seen + 1);
       hint._t = setTimeout(() => hint.classList.remove('show'), COUNTDOWN + 3500);
@@ -2617,7 +2677,20 @@
     if (state !== 'playing' && state !== 'countdown') return;
     if (e.target.closest('button, input, .overlay, #menu, #settings, #ranks, .hold-box, .zone-box, .mstats')) return;
     e.preventDefault();
-    gest = { id: e.pointerId, x0: e.clientX, y0: e.clientY, lx: e.clientX, ly: e.clientY, t0: e.timeStamp,
+    // Inside a touch pad, the pad's own left/right half picks the rotation; elsewhere the screen's.
+    const pad = e.target.closest('.tpad');
+    let midX = window.innerWidth / 2;
+    if (pad) {
+      const r = pad.getBoundingClientRect();
+      midX = r.left + r.width / 2;
+      pad.classList.add('touching');
+      const rp = document.createElement('i');
+      rp.className = 'ripple';
+      rp.style.left = (e.clientX - r.left) + 'px'; rp.style.top = (e.clientY - r.top) + 'px';
+      pad.appendChild(rp);
+      setTimeout(() => rp.remove(), 500);
+    }
+    gest = { id: e.pointerId, midX, pad, x0: e.clientX, y0: e.clientY, lx: e.clientX, ly: e.clientY, t0: e.timeStamp,
              accX: 0, accY: 0, axis: null, done: false, samples: [[e.timeStamp, e.clientX, e.clientY]] };
   }, { passive: false });
 
@@ -2655,11 +2728,12 @@
     if (!gest || e.pointerId !== gest.id) return;
     const g = gest;
     gest = null;
+    if (g.pad) g.pad.classList.remove('touching');
     if (cancelled || g.done || state !== 'playing' || !cur || clearing) return;
     // Use the last tracked position: some browsers report 0,0 on pointerup/cancel.
     const dt = e.timeStamp - g.t0, tx = g.lx - g.x0, ty = g.ly - g.y0;
     if (!g.axis && dt < TAP_MS && Math.abs(tx) < TAP_MOVE && Math.abs(ty) < TAP_MOVE) {
-      rotate(g.x0 < window.innerWidth / 2 ? -1 : 1);
+      rotate(g.x0 < g.midX ? -1 : 1);
       return;
     }
     if (g.axis !== 'y') return;
