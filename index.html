@@ -23,7 +23,7 @@
     --f-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
   }
   * { box-sizing: border-box; }
-  html, body { margin: 0; height: 100%; }
+  html, body { margin: 0; height: 100%; overscroll-behavior: none; }
   body {
     background: #06070c;
     color: var(--text);
@@ -445,6 +445,38 @@
   body.tablet.landscape .pad-rot { grid-area: padR; align-self: end; justify-self: center; }
   body.tablet.landscape .side { width: calc(var(--pb) * 3 + var(--pg) * 2); }
 
+  /* ---------- Swipe controls (phone + tablet): no on-screen pads, gestures on the whole game ---------- */
+  body.swipe .touch { display: none !important; }
+  body.swipe .game { touch-action: none; }
+  body.swipe .hold-box, body.swipe .zone-box { cursor: pointer; }
+  body.tablet.portrait.swipe .game { grid-template-areas: "left board right"; }
+  /* phone: HOLD · NEXT (horizontal) · ZONE in one strip above a full-width board */
+  body.phone.swipe .game {
+    grid-template-columns: auto 1fr auto;
+    grid-template-rows: auto auto 1fr;
+    grid-template-areas: "mstats mstats mstats" "hold next zone" "board board board";
+  }
+  body.phone.swipe .board-wrap { justify-self: center; }
+  body.phone.swipe .next-box canvas { margin: 0 auto; }
+  body.phone.swipe .zone-box { min-width: 64px; align-self: stretch; }
+  body.tablet.landscape.swipe .side { width: 150px; }
+  body.tablet.landscape.swipe .best-box { display: block; }
+  .ghint {
+    position: absolute; left: 50%; bottom: 7%; transform: translateX(-50%); z-index: 2;
+    width: max-content; max-width: 92%;
+    display: none; grid-template-columns: auto 1fr; gap: 6px 12px; align-items: center;
+    padding: 12px 16px; border-radius: 4px 16px 4px 16px;
+    background: rgba(4, 6, 12, 0.82); border: 1px solid var(--panel-border);
+    font-size: 13px; line-height: 1.3; pointer-events: none;
+  }
+  .ghint.show { display: grid; animation: fadein 0.3s ease-out; }
+  .ghint b { font-family: var(--f-mono); color: var(--accent); text-align: center; white-space: nowrap; }
+  .seg { display: flex; gap: 0; }
+  .seg button { border-radius: 0; font-size: 13px; padding: 7px 12px; }
+  .seg button:first-child { border-radius: 3px 0 0 10px; }
+  .seg button:last-child { border-radius: 0 10px 3px 0; }
+  .seg button.on { background: var(--accent); border-color: var(--accent); color: #0b0d12; font-weight: 700; }
+
   /* ---------- Touch pads (phone + tablet), laid out like Game Boy / DS / Tetris 99 ----------
      left : ZONE on the shoulder, D-pad below (up = hard drop, down = soft drop)
      right: HOLD on the shoulder, A (↻ clockwise) upper-right and B (↺ counter-clockwise) lower-left */
@@ -593,6 +625,17 @@
     <div class="set-group">KEYS</div>
     <div id="keybinds"></div>
     <small class="kb-hint">버튼을 누른 뒤 원하는 키를 누르세요 · Backspace 지우기 · Esc 취소<br>P(일시정지)·M(소리)·Enter·Esc는 바꿀 수 없어요</small>
+    <div class="set-group">TOUCH</div>
+    <div class="row">
+      <label>터치 조작 방식</label>
+      <div class="seg" id="s-touch"><button data-v="swipe">스와이프</button><button data-v="buttons">버튼</button></div>
+      <small>휴대폰·태블릿에서만 적용돼요. 스와이프: 밀어서 이동 · 탭 회전(왼쪽 ↺ / 오른쪽 ↻) · 아래로 끌기/튕기기 · 위로 튕겨 홀드</small>
+    </div>
+    <div class="row">
+      <label for="s-sens">스와이프 민감도</label><output id="o-sens"></output>
+      <input type="range" id="s-sens" min="0.6" max="2" step="0.1">
+      <small>1.0이면 블록이 손가락을 그대로 따라가요. 높을수록 조금만 밀어도 여러 칸 이동</small>
+    </div>
     <div class="set-group">SOUND</div>
     <div class="row"><label for="s-sfx">효과음</label><div class="switch"><input type="checkbox" id="s-sfx"><span></span></div></div>
     <div class="row"><label for="s-bgm">배경음</label><div class="switch"><input type="checkbox" id="s-bgm"><span></span></div></div>
@@ -649,6 +692,13 @@
     <div class="popup" id="popup"></div>
     <div class="banner" id="banner"><div class="b1" id="banner1"></div><div class="b2" id="banner2"></div></div>
     <div class="count" id="count"></div>
+    <div class="ghint" id="ghint">
+      <b>← →</b><span>누른 채 밀어서 이동</span>
+      <b>탭</b><span>회전 (왼쪽 ↺ · 오른쪽 ↻)</span>
+      <b>↓</b><span>끌어내리면 천천히, 빠르게 튕기면 바로 떨어짐</span>
+      <b>↑</b><span>위로 튕기면 홀드</span>
+      <b>ZONE</b><span>ZONE 칸을 탭하면 발동</span>
+    </div>
     <div class="overlay hidden" id="overlay">
       <h1 id="ov-title"></h1>
       <div id="ov-text"></div>
@@ -812,7 +862,8 @@
   };
   const cloneKeys = k => JSON.parse(JSON.stringify(k));
   const RESERVED_KEYS = new Set(['Escape', 'Enter', 'KeyP', 'KeyM', 'Tab']);
-  const DEFAULT_SETTINGS = { ver: 3, das: 165, arr: 30, sdf: 20, ghost: true, grid: true, shake: true, fx: true, skin: 'auto' };
+  const DEFAULT_SETTINGS = { ver: 3, das: 165, arr: 30, sdf: 20, ghost: true, grid: true, shake: true, fx: true, skin: 'auto',
+    touch: 'swipe', swipeSens: 1 };
   // Touch taps last longer than key taps, so on-screen buttons never auto-repeat sooner than this.
   const TOUCH_DAS = 230, TOUCH_ARR = 45;
   // Soft drop moves one row at once, then waits briefly before repeating so a quick tap moves exactly one row.
@@ -1036,6 +1087,8 @@
   const popup = $('popup'), banner = $('banner'), countEl = $('count');
 
   let cell = 30, previewCell = 18, vw = 0, vh = 0, logoCell = 14;
+  // Next queue layout: vertical column (default) or a horizontal strip (phone + swipe).
+  let nextHorizontal = false, nextCount = 5;
 
   function setupCanvas(cv, ctx, w, h) {
     const dpr = window.devicePixelRatio || 1;
@@ -1079,6 +1132,8 @@
     bc.toggle('tablet', device === 'tablet');
     bc.toggle('landscape', device === 'tablet' && landscape);
     bc.toggle('portrait', device === 'tablet' && !landscape);
+    const swipe = device !== 'desktop' && settings.touch === 'swipe';
+    bc.toggle('swipe', swipe);
     let byH, byW, maxCell = 36;
     // Thumb pads: button size (pb) and gap (pg) scale with the screen.
     const rootStyle = document.documentElement.style;
@@ -1089,12 +1144,23 @@
     };
     if (device === 'phone') {
       const pad = setPad(Math.round(Math.max(40, Math.min(54, vh * 0.064, (vw - 32 - 24) / 5.8))), 7);
-      byH = (vh - 16 - 58 - pad.h - 16) / ROWS;
-      byW = (vw - 32 - 74 - 8) / COLS;
-      previewCell = 11;
+      if (swipe) {
+        // mstats (~50) + HOLD/NEXT/ZONE strip (~62) + gaps above a full-width board
+        byH = (vh - 16 - 50 - 62 - 16) / ROWS;
+        byW = (vw - 32) / COLS;
+        previewCell = 10;
+      } else {
+        byH = (vh - 16 - 58 - pad.h - 16) / ROWS;
+        byW = (vw - 32 - 74 - 8) / COLS;
+        previewCell = 11;
+      }
     } else if (device === 'tablet') {
       const pad = setPad(Math.round(Math.max(60, Math.min(84, Math.min(vw, vh) * 0.095))), 10);
-      if (landscape) {
+      if (swipe) {
+        byH = (vh - (landscape ? 40 : 54)) / ROWS;
+        byW = (vw - 32 - 2 * 150 - 2 * 22) / COLS;
+        previewCell = 18;
+      } else if (landscape) {
         byH = (vh - 40) / ROWS;
         byW = (vw - 32 - 2 * pad.w - 2 * 22) / COLS;
         // The right column stacks NEXT (15 preview rows), stage and lines boxes (~230px) above the pad.
@@ -1112,10 +1178,13 @@
     }
     cell = Math.max(12, Math.floor(Math.min(byH, byW, maxCell)));
     $('pause-btn').textContent = device === 'desktop' ? '일시정지 (P)' : 'Ⅱ  일시정지';
-    if (device === 'tablet' && landscape) fitLandscapePads();
+    if (device === 'tablet' && landscape && !swipe) fitLandscapePads();
     setupCanvas(boardCv, bctx, COLS * cell, ROWS * cell);
     setupCanvas(holdCv, hctx, previewCell * 5, previewCell * 3);
-    setupCanvas(nextCv, nctx, previewCell * 5, previewCell * 3 * 5);
+    nextHorizontal = device === 'phone' && swipe;
+    nextCount = nextHorizontal ? 4 : 5;
+    if (nextHorizontal) setupCanvas(nextCv, nctx, Math.round(previewCell * 4.6) * nextCount, previewCell * 3);
+    else setupCanvas(nextCv, nctx, previewCell * 5, previewCell * 3 * 5);
     setupCanvas(ambCv, actx, vw, vh);
     setupCanvas(fxCv, fctx, vw, vh);
     logoCell = Math.max(3, Math.min(10, Math.floor((Math.min(vw, 980) * (vw > 860 ? 0.46 : 0.86)) / LOGO_W)));
@@ -1648,6 +1717,15 @@
     state = 'countdown'; countT = 0;
     showCount('READY'); Sound.play('count');
     Sound.startBgm();
+    // Explain the swipe gestures for the first few games on a touch device.
+    const seen = store.get('seongmo-tetris-ghint', 0);
+    const hint = $('ghint');
+    clearTimeout(hint._t);
+    hint.classList.toggle('show', document.body.classList.contains('swipe') && seen < 5);
+    if (hint.classList.contains('show')) {
+      store.set('seongmo-tetris-ghint', seen + 1);
+      hint._t = setTimeout(() => hint.classList.remove('show'), COUNTDOWN + 3500);
+    }
   }
 
   function showCount(text) {
@@ -1897,7 +1975,8 @@
     segs.forEach((b, i) => { b.style.width = Math.max(0, Math.min(1, shown * 4 - i)) * 100 + '%'; });
     const ready = !zoneActive && zoneMeter >= 0.25;
     $('zone-box').classList.toggle('ready', ready);
-    setHud('zone-hint', zoneActive ? '발동 중' : ready ? (device === 'desktop' ? 'E 키로 발동' : 'ZONE 버튼으로 발동') : '줄을 지워 충전');
+    setHud('zone-hint', zoneActive ? '발동 중' : !ready ? '줄을 지워 충전'
+      : device === 'desktop' ? 'E 키로 발동' : document.body.classList.contains('swipe') ? '이 칸을 탭해서 발동' : 'ZONE 버튼으로 발동');
     $('zone-timer').style.width = zoneActive ? (zoneTime / zoneTotal * 100) + '%' : '0';
   }
 
@@ -2227,6 +2306,9 @@
     for (const k of ['ghost', 'grid', 'shake', 'fx']) $('s-' + k).checked = settings[k];
     $('s-sfx').checked = Sound.cfg.sfx;
     $('s-bgm').checked = Sound.cfg.bgm;
+    document.querySelectorAll('#s-touch button').forEach(b => b.classList.toggle('on', b.dataset.v === settings.touch));
+    $('s-sens').value = settings.swipeSens;
+    $('o-sens').textContent = settings.swipeSens.toFixed(1);
     renderSkins();
     renderKeybinds();
   }
@@ -2245,12 +2327,18 @@
   for (const k of ['ghost', 'grid', 'shake', 'fx']) {
     $('s-' + k).addEventListener('change', e => { settings[k] = e.target.checked; saveSettings(); });
   }
+  document.querySelectorAll('#s-touch button').forEach(b => b.addEventListener('click', () => {
+    settings.touch = b.dataset.v; saveSettings(); syncSettingsUi(); layout();
+  }));
+  $('s-sens').addEventListener('input', e => {
+    settings.swipeSens = +e.target.value; $('o-sens').textContent = settings.swipeSens.toFixed(1); saveSettings();
+  });
   $('s-sfx').addEventListener('change', e => Sound.toggle('sfx', e.target.checked));
   $('s-bgm').addEventListener('change', e => Sound.toggle('bgm', e.target.checked));
   $('s-reset').addEventListener('click', () => {
     Object.assign(settings, DEFAULT_SETTINGS);
     settings.keys = cloneKeys(DEFAULT_KEYS);
-    saveSettings(); rebuildKeymap(); syncSettingsUi();
+    saveSettings(); rebuildKeymap(); syncSettingsUi(); layout();
   });
 
   const SKINS = [['auto', '자동'], ['bevel', '입체'], ['glass', '유리'], ['round', '둥근'], ['flat', '단색'], ['neon', '네온']];
@@ -2505,6 +2593,86 @@
   });
 
   $('pause-btn').addEventListener('click', e => { e.currentTarget.blur(); togglePause(); });
+
+  // ----- swipe gestures (touch/pen only, so mouse play on PC is unchanged) -----
+  // Like the official Tetris mobile app: drag sideways to move (the piece follows the finger),
+  // tap to rotate (left half ↺, right half ↻), drag down to soft drop, flick down to hard drop,
+  // flick up to hold. HOLD / ZONE panels can also be tapped.
+  const TAP_MS = 280, TAP_MOVE = 12, AXIS_LOCK = 10;
+  const FLICK_DOWN = 0.9, FLICK_UP = 0.7; // px per ms
+  let gest = null;
+  const swipeOn = () => document.body.classList.contains('swipe');
+
+  document.querySelector('.hold-box').addEventListener('pointerdown', e => {
+    if (e.pointerType === 'mouse' || !swipeOn()) return;
+    e.preventDefault(); press('hold');
+  });
+  document.querySelector('.zone-box').addEventListener('pointerdown', e => {
+    if (e.pointerType === 'mouse' || !swipeOn()) return;
+    e.preventDefault(); press('zone');
+  });
+
+  document.addEventListener('pointerdown', e => {
+    if (e.pointerType === 'mouse' || !swipeOn() || gest) return;
+    if (state !== 'playing' && state !== 'countdown') return;
+    if (e.target.closest('button, input, .overlay, #menu, #settings, #ranks, .hold-box, .zone-box, .mstats')) return;
+    e.preventDefault();
+    gest = { id: e.pointerId, x0: e.clientX, y0: e.clientY, lx: e.clientX, ly: e.clientY, t0: e.timeStamp,
+             accX: 0, accY: 0, axis: null, done: false, samples: [[e.timeStamp, e.clientX, e.clientY]] };
+  }, { passive: false });
+
+  document.addEventListener('pointermove', e => {
+    if (!gest || e.pointerId !== gest.id) return;
+    e.preventDefault();
+    const dx = e.clientX - gest.lx, dy = e.clientY - gest.ly;
+    gest.lx = e.clientX; gest.ly = e.clientY;
+    gest.samples.push([e.timeStamp, e.clientX, e.clientY]);
+    while (gest.samples.length > 2 && e.timeStamp - gest.samples[0][0] > 90) gest.samples.shift();
+    if (!gest.axis) {
+      const tx = e.clientX - gest.x0, ty = e.clientY - gest.y0;
+      if (Math.abs(tx) < AXIS_LOCK && Math.abs(ty) < AXIS_LOCK) return;
+      gest.axis = Math.abs(tx) > Math.abs(ty) ? 'x' : 'y';
+      // Count the movement that happened before the axis was decided.
+      if (gest.axis === 'x') gest.accX = tx; else gest.accY = ty;
+    } else if (gest.axis === 'x') gest.accX += dx; else gest.accY += dy;
+    if (gest.done || state !== 'playing' || !cur || clearing) return;
+    const step = Math.max(12, cell / settings.swipeSens);
+    if (gest.axis === 'x') {
+      while (Math.abs(gest.accX) >= step) {
+        const dir = Math.sign(gest.accX);
+        if (!move(dir)) { gest.accX = 0; break; }
+        gest.accX -= dir * step;
+      }
+    } else {
+      while (gest.accY >= step) {
+        if (!softDrop()) { gest.accY = 0; break; }
+        gest.accY -= step;
+      }
+    }
+  }, { passive: false });
+
+  function endGesture(e, cancelled) {
+    if (!gest || e.pointerId !== gest.id) return;
+    const g = gest;
+    gest = null;
+    if (cancelled || g.done || state !== 'playing' || !cur || clearing) return;
+    // Use the last tracked position: some browsers report 0,0 on pointerup/cancel.
+    const dt = e.timeStamp - g.t0, tx = g.lx - g.x0, ty = g.ly - g.y0;
+    if (!g.axis && dt < TAP_MS && Math.abs(tx) < TAP_MOVE && Math.abs(ty) < TAP_MOVE) {
+      rotate(g.x0 < window.innerWidth / 2 ? -1 : 1);
+      return;
+    }
+    if (g.axis !== 'y') return;
+    // Flick speed over the last ~90 ms of movement; a finger that stopped before lifting is not a flick.
+    const first = g.samples[0], last = g.samples[g.samples.length - 1];
+    const idle = e.timeStamp - last[0];
+    const vy = idle > 120 ? 0 : (last[2] - first[2]) / Math.max(1, last[0] - first[0]);
+    const step = Math.max(12, cell / settings.swipeSens);
+    if (vy > FLICK_DOWN && ty > step) hardDrop();
+    else if (vy < -FLICK_UP && ty < -step * 1.5) hold();
+  }
+  document.addEventListener('pointerup', e => endGesture(e, false));
+  document.addEventListener('pointercancel', e => endGesture(e, true));
   document.querySelectorAll('.mode').forEach(b => b.addEventListener('click', () => { b.blur(); newGame(b.dataset.mode); }));
   document.querySelectorAll('.t-sfx').forEach(b => b.addEventListener('click', () => {
     Sound.toggle('sfx', !Sound.cfg.sfx); refreshMenu(); Sound.play('select');
@@ -2693,8 +2861,14 @@
     const bw = previewCell * 5, bh = previewCell * 3;
     hctx.clearRect(0, 0, bw, bh);
     if (holdType) drawMini(hctx, holdType, 0, 0, bw, bh, holdUsed);
-    nctx.clearRect(0, 0, bw, bh * 5);
-    if (queue) queue.slice(0, 5).forEach((t, i) => drawMini(nctx, t, 0, i * bh, bw, bh, false));
+    if (nextHorizontal) {
+      const sw = Math.round(previewCell * 4.6);
+      nctx.clearRect(0, 0, sw * nextCount, bh);
+      if (queue) queue.slice(0, nextCount).forEach((t, i) => drawMini(nctx, t, i * sw, 0, sw, bh, false));
+    } else {
+      nctx.clearRect(0, 0, bw, bh * 5);
+      if (queue) queue.slice(0, 5).forEach((t, i) => drawMini(nctx, t, 0, i * bh, bw, bh, false));
+    }
   }
 
   let last = performance.now();
